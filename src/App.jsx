@@ -1,0 +1,610 @@
+import { useMemo, useState } from 'react';
+import { exercises } from './data/exercises.js';
+import { calculateBMI, formatNumber, getBMICategory, getTodayISO, sortByDateDesc } from './utils/calculations.js';
+
+const STORAGE_KEYS = {
+  profile: 'caveman-profile',
+  bodyLogs: 'caveman-body-logs',
+  workouts: 'caveman-workouts'
+};
+
+const defaultProfile = {
+  name: 'Bobby',
+  heightCm: 185,
+  birthYear: 1989,
+  goal: 'Fat loss and muscle gain',
+  targetWeightKg: '',
+  targetWaistCm: ''
+};
+
+function loadFromStorage(key, fallback) {
+  try {
+    const value = localStorage.getItem(key);
+    return value ? JSON.parse(value) : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function saveToStorage(key, value) {
+  localStorage.setItem(key, JSON.stringify(value));
+}
+
+function getExerciseById(exerciseId) {
+  return exercises.find((item) => item.id === exerciseId);
+}
+
+function getLastExerciseEntry(workouts, exerciseId) {
+  for (const workout of workouts) {
+    const entry = workout.entries?.find((item) => item.exerciseId === exerciseId);
+    if (entry) {
+      return { workout, entry };
+    }
+  }
+  return null;
+}
+
+function formatSets(sets = []) {
+  return sets.map((set) => `${set.kg || '-'}kg x ${set.reps || '-'}`).join(' / ');
+}
+
+function App() {
+  const [activeTab, setActiveTab] = useState('dashboard');
+  const [profile, setProfile] = useState(() => loadFromStorage(STORAGE_KEYS.profile, defaultProfile));
+  const [bodyLogs, setBodyLogs] = useState(() => loadFromStorage(STORAGE_KEYS.bodyLogs, []));
+  const [workouts, setWorkouts] = useState(() => loadFromStorage(STORAGE_KEYS.workouts, []));
+
+  function updateProfile(nextProfile) {
+    setProfile(nextProfile);
+    saveToStorage(STORAGE_KEYS.profile, nextProfile);
+  }
+
+  function addBodyLog(log) {
+    const bmi = calculateBMI(log.weightKg, profile.heightCm);
+    const nextLog = {
+      ...log,
+      id: crypto.randomUUID(),
+      bmi,
+      bmiCategory: getBMICategory(bmi)
+    };
+    const nextLogs = sortByDateDesc([nextLog, ...bodyLogs]);
+    setBodyLogs(nextLogs);
+    saveToStorage(STORAGE_KEYS.bodyLogs, nextLogs);
+  }
+
+  function deleteBodyLog(id) {
+    const nextLogs = bodyLogs.filter((log) => log.id !== id);
+    setBodyLogs(nextLogs);
+    saveToStorage(STORAGE_KEYS.bodyLogs, nextLogs);
+  }
+
+  function addWorkout(workout) {
+    const nextWorkout = {
+      ...workout,
+      id: crypto.randomUUID(),
+      createdAt: new Date().toISOString()
+    };
+    const nextWorkouts = sortByDateDesc([nextWorkout, ...workouts]);
+    setWorkouts(nextWorkouts);
+    saveToStorage(STORAGE_KEYS.workouts, nextWorkouts);
+  }
+
+  function deleteWorkout(id) {
+    const nextWorkouts = workouts.filter((workout) => workout.id !== id);
+    setWorkouts(nextWorkouts);
+    saveToStorage(STORAGE_KEYS.workouts, nextWorkouts);
+  }
+
+  function exportData() {
+    const backup = {
+      app: 'The Caveman’s Sweat Log',
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      profile,
+      bodyLogs,
+      workouts
+    };
+
+    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `cavemans-sweat-log-backup-${getTodayISO()}.json`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  function importData(data) {
+    if (!data || typeof data !== 'object') {
+      alert('Could not import file. The file does not look like a valid backup.');
+      return;
+    }
+
+    const nextProfile = data.profile && typeof data.profile === 'object' ? data.profile : defaultProfile;
+    const nextBodyLogs = Array.isArray(data.bodyLogs) ? data.bodyLogs : [];
+    const nextWorkouts = Array.isArray(data.workouts) ? data.workouts : [];
+
+    const ok = window.confirm('Import backup? This will replace the current local data on this device.');
+    if (!ok) return;
+
+    setProfile(nextProfile);
+    setBodyLogs(nextBodyLogs);
+    setWorkouts(nextWorkouts);
+
+    saveToStorage(STORAGE_KEYS.profile, nextProfile);
+    saveToStorage(STORAGE_KEYS.bodyLogs, nextBodyLogs);
+    saveToStorage(STORAGE_KEYS.workouts, nextWorkouts);
+  }
+
+  return (
+    <div className="app-shell">
+      <header className="hero">
+        <div>
+          <p className="eyebrow">🪨 The Cave Project</p>
+          <h1>The Caveman’s Sweat Log</h1>
+          <p className="tagline">Lift. Log. Evolve.</p>
+        </div>
+        <div className="hero-card">
+          <span>Mode</span>
+          <strong>{profile.goal || 'Training'}</strong>
+        </div>
+      </header>
+
+      <nav className="tabs" aria-label="Main navigation">
+        <button className={activeTab === 'dashboard' ? 'active' : ''} onClick={() => setActiveTab('dashboard')}>Dashboard</button>
+        <button className={activeTab === 'body' ? 'active' : ''} onClick={() => setActiveTab('body')}>Body Log</button>
+        <button className={activeTab === 'workout' ? 'active' : ''} onClick={() => setActiveTab('workout')}>Workout Log</button>
+        <button className={activeTab === 'exercises' ? 'active' : ''} onClick={() => setActiveTab('exercises')}>Exercises</button>
+        <button className={activeTab === 'settings' ? 'active' : ''} onClick={() => setActiveTab('settings')}>Settings</button>
+      </nav>
+
+      <main>
+        {activeTab === 'dashboard' && <Dashboard profile={profile} bodyLogs={bodyLogs} workouts={workouts} />}
+        {activeTab === 'body' && <BodyLog profile={profile} bodyLogs={bodyLogs} onAdd={addBodyLog} onDelete={deleteBodyLog} />}
+        {activeTab === 'workout' && <WorkoutLog workouts={workouts} onAdd={addWorkout} onDelete={deleteWorkout} />}
+        {activeTab === 'exercises' && <ExerciseLibrary workouts={workouts} />}
+        {activeTab === 'settings' && <Settings profile={profile} onSave={updateProfile} onExport={exportData} onImport={importData} />}
+      </main>
+    </div>
+  );
+}
+
+function Dashboard({ profile, bodyLogs, workouts }) {
+  const latestBody = bodyLogs[0];
+  const latestWorkout = workouts[0];
+  const thisWeekWorkouts = useMemo(() => {
+    const now = new Date();
+    const sevenDaysAgo = new Date(now);
+    sevenDaysAgo.setDate(now.getDate() - 7);
+    return workouts.filter((workout) => new Date(workout.date) >= sevenDaysAgo).length;
+  }, [workouts]);
+
+  const latestBMI = latestBody?.bmi ?? calculateBMI(latestBody?.weightKg, profile.heightCm);
+
+  return (
+    <section className="grid two">
+      <article className="card big-card">
+        <p className="eyebrow">Today</p>
+        <h2>Welcome back, {profile.name || 'Caveman'}.</h2>
+        <p>Log the work. Watch the trend. No drama, just data.</p>
+      </article>
+
+      <article className="card stats-card">
+        <Stat label="Latest weight" value={`${formatNumber(latestBody?.weightKg)} kg`} />
+        <Stat label="Latest waist" value={`${formatNumber(latestBody?.waistCm)} cm`} />
+        <Stat label="Current BMI" value={latestBMI ? `${latestBMI} · ${getBMICategory(latestBMI)}` : '-'} />
+        <Stat label="Workouts last 7 days" value={thisWeekWorkouts} />
+      </article>
+
+      <article className="card">
+        <h3>Latest Body Log</h3>
+        {latestBody ? (
+          <div className="simple-list">
+            <p><strong>{latestBody.date}</strong></p>
+            <p>Weight: {latestBody.weightKg || '-'} kg</p>
+            <p>Waist: {latestBody.waistCm || '-'} cm</p>
+            <p>BMI: {latestBody.bmi || '-'} {latestBody.bmiCategory ? `· ${latestBody.bmiCategory}` : ''}</p>
+          </div>
+        ) : (
+          <p>No body logs yet. Start with weight and waist.</p>
+        )}
+      </article>
+
+      <article className="card">
+        <h3>Latest Workout</h3>
+        {latestWorkout ? (
+          <div className="simple-list">
+            <p><strong>{latestWorkout.title}</strong> · {latestWorkout.date}</p>
+            <p>{latestWorkout.entries.length} exercise entries</p>
+            <p>{latestWorkout.note || 'No note'}</p>
+          </div>
+        ) : (
+          <p>No workouts yet. Save your first sweat.</p>
+        )}
+      </article>
+    </section>
+  );
+}
+
+function Stat({ label, value }) {
+  return (
+    <div className="stat">
+      <span>{label}</span>
+      <strong>{value}</strong>
+    </div>
+  );
+}
+
+function BodyLog({ profile, bodyLogs, onAdd, onDelete }) {
+  const [form, setForm] = useState({
+    date: getTodayISO(),
+    weightKg: '',
+    waistCm: '',
+    chestCm: '',
+    hipsCm: '',
+    leftArmCm: '',
+    rightArmCm: '',
+    leftThighCm: '',
+    rightThighCm: '',
+    leftCalfCm: '',
+    rightCalfCm: '',
+    note: ''
+  });
+
+  const previewBMI = calculateBMI(form.weightKg, profile.heightCm);
+
+  function handleSubmit(event) {
+    event.preventDefault();
+    if (!form.weightKg && !form.waistCm) return;
+    onAdd(form);
+    setForm({ ...form, weightKg: '', waistCm: '', note: '' });
+  }
+
+  return (
+    <section className="grid two">
+      <article className="card">
+        <h2>Body Log</h2>
+        <p className="muted">Daily minimum: weight and waist. The rest can be weekly.</p>
+
+        <form onSubmit={handleSubmit} className="form-grid">
+          <Input label="Date" type="date" value={form.date} onChange={(value) => setForm({ ...form, date: value })} />
+          <Input label="Weight kg" type="number" step="0.1" value={form.weightKg} onChange={(value) => setForm({ ...form, weightKg: value })} />
+          <Input label="Waist cm" type="number" step="0.1" value={form.waistCm} onChange={(value) => setForm({ ...form, waistCm: value })} />
+          <Input label="Chest cm" type="number" step="0.1" value={form.chestCm} onChange={(value) => setForm({ ...form, chestCm: value })} />
+          <Input label="Hips cm" type="number" step="0.1" value={form.hipsCm} onChange={(value) => setForm({ ...form, hipsCm: value })} />
+          <Input label="Left arm cm" type="number" step="0.1" value={form.leftArmCm} onChange={(value) => setForm({ ...form, leftArmCm: value })} />
+          <Input label="Right arm cm" type="number" step="0.1" value={form.rightArmCm} onChange={(value) => setForm({ ...form, rightArmCm: value })} />
+          <Input label="Left thigh cm" type="number" step="0.1" value={form.leftThighCm} onChange={(value) => setForm({ ...form, leftThighCm: value })} />
+          <Input label="Right thigh cm" type="number" step="0.1" value={form.rightThighCm} onChange={(value) => setForm({ ...form, rightThighCm: value })} />
+          <Input label="Left calf cm" type="number" step="0.1" value={form.leftCalfCm} onChange={(value) => setForm({ ...form, leftCalfCm: value })} />
+          <Input label="Right calf cm" type="number" step="0.1" value={form.rightCalfCm} onChange={(value) => setForm({ ...form, rightCalfCm: value })} />
+          <label className="field full">
+            <span>Note</span>
+            <textarea value={form.note} onChange={(event) => setForm({ ...form, note: event.target.value })} placeholder="Morning weight, after training, tired, strong, etc." />
+          </label>
+
+          <div className="preview-box full">
+            <span>BMI preview</span>
+            <strong>{previewBMI ? `${previewBMI} · ${getBMICategory(previewBMI)}` : 'Add weight + height'}</strong>
+          </div>
+
+          <button className="primary full" type="submit">Save Body Log</button>
+        </form>
+      </article>
+
+      <article className="card">
+        <h3>History</h3>
+        <div className="log-list">
+          {bodyLogs.length === 0 && <p>No body logs yet.</p>}
+          {bodyLogs.map((log) => (
+            <div className="log-item" key={log.id}>
+              <div>
+                <strong>{log.date}</strong>
+                <p>{log.weightKg || '-'} kg · waist {log.waistCm || '-'} cm · BMI {log.bmi || '-'}</p>
+                {log.note && <small>{log.note}</small>}
+              </div>
+              <button className="ghost danger" onClick={() => onDelete(log.id)}>Delete</button>
+            </div>
+          ))}
+        </div>
+      </article>
+    </section>
+  );
+}
+
+function WorkoutLog({ workouts, onAdd, onDelete }) {
+  const [title, setTitle] = useState('Upper Body');
+  const [date, setDate] = useState(getTodayISO());
+  const [note, setNote] = useState('');
+  const [entries, setEntries] = useState([]);
+  const [selectedExerciseId, setSelectedExerciseId] = useState(exercises[0].id);
+
+  const selectedExercise = getExerciseById(selectedExerciseId);
+  const lastSelected = getLastExerciseEntry(workouts, selectedExerciseId);
+
+  function addExerciseEntry() {
+    const exercise = getExerciseById(selectedExerciseId);
+    const previous = getLastExerciseEntry(workouts, selectedExerciseId);
+    const sets = previous?.entry?.sets?.length
+      ? previous.entry.sets.map((set) => ({ kg: set.kg || '', reps: set.reps || exercise.defaultReps || 12 }))
+      : Array.from({ length: exercise.defaultSets || 3 }, () => ({ kg: '', reps: exercise.defaultReps || 12 }));
+
+    const newEntry = {
+      id: crypto.randomUUID(),
+      exerciseId: exercise.id,
+      exerciseName: exercise.name,
+      sets,
+      note: ''
+    };
+    setEntries([...entries, newEntry]);
+  }
+
+  function updateSet(entryId, setIndex, field, value) {
+    setEntries(entries.map((entry) => {
+      if (entry.id !== entryId) return entry;
+      const nextSets = entry.sets.map((set, index) => index === setIndex ? { ...set, [field]: value } : set);
+      return { ...entry, sets: nextSets };
+    }));
+  }
+
+  function addSameSet(entryId) {
+    setEntries(entries.map((entry) => {
+      if (entry.id !== entryId) return entry;
+      const lastSet = entry.sets[entry.sets.length - 1] || { kg: '', reps: 12 };
+      return { ...entry, sets: [...entry.sets, { ...lastSet }] };
+    }));
+  }
+
+  function removeSet(entryId, setIndex) {
+    setEntries(entries.map((entry) => {
+      if (entry.id !== entryId) return entry;
+      if (entry.sets.length <= 1) return entry;
+      return { ...entry, sets: entry.sets.filter((_, index) => index !== setIndex) };
+    }));
+  }
+
+  function removeEntry(entryId) {
+    setEntries(entries.filter((entry) => entry.id !== entryId));
+  }
+
+  function updateEntryNote(entryId, value) {
+    setEntries(entries.map((entry) => entry.id === entryId ? { ...entry, note: value } : entry));
+  }
+
+  function handleSubmit(event) {
+    event.preventDefault();
+    if (entries.length === 0) return;
+    onAdd({ title, date, note, entries });
+    setEntries([]);
+    setNote('');
+  }
+
+  return (
+    <section className="grid two">
+      <article className="card wide-card">
+        <h2>Workout Log</h2>
+        <p className="muted">Choose an exercise, add sets, then save sweat.</p>
+
+        <form onSubmit={handleSubmit} className="workout-form">
+          <div className="form-grid">
+            <Input label="Workout title" value={title} onChange={setTitle} />
+            <Input label="Date" type="date" value={date} onChange={setDate} />
+          </div>
+
+          <div className="add-exercise-row">
+            <label className="field">
+              <span>Exercise</span>
+              <select value={selectedExerciseId} onChange={(event) => setSelectedExerciseId(event.target.value)}>
+                {exercises.map((exercise) => (
+                  <option key={exercise.id} value={exercise.id}>{exercise.name} · {exercise.muscleGroup}</option>
+                ))}
+              </select>
+            </label>
+            <button type="button" className="secondary" onClick={addExerciseEntry}>Add Exercise</button>
+          </div>
+
+          <div className="last-used-box">
+            <span>Selected</span>
+            <strong>{selectedExercise?.name}</strong>
+            {lastSelected ? (
+              <p>Last used {lastSelected.workout.date}: {formatSets(lastSelected.entry.sets)}</p>
+            ) : (
+              <p>No previous sets for this exercise yet.</p>
+            )}
+          </div>
+
+          <div className="exercise-entry-list">
+            {entries.map((entry) => {
+              const lastForEntry = getLastExerciseEntry(workouts, entry.exerciseId);
+              return (
+                <div className="exercise-entry" key={entry.id}>
+                  <div className="entry-header">
+                    <div>
+                      <h3>{entry.exerciseName}</h3>
+                      {lastForEntry && <p>Last: {formatSets(lastForEntry.entry.sets)}</p>}
+                    </div>
+                    <button type="button" className="ghost danger" onClick={() => removeEntry(entry.id)}>Remove</button>
+                  </div>
+
+                  <div className="sets-table">
+                    <div className="sets-row sets-head">
+                      <span>Set</span>
+                      <span>Kg</span>
+                      <span>Reps</span>
+                      <span></span>
+                    </div>
+                    {entry.sets.map((set, index) => (
+                      <div className="sets-row" key={index}>
+                        <span>{index + 1}</span>
+                        <input type="number" step="0.5" value={set.kg} onChange={(event) => updateSet(entry.id, index, 'kg', event.target.value)} placeholder="kg" />
+                        <input type="number" step="1" value={set.reps} onChange={(event) => updateSet(entry.id, index, 'reps', event.target.value)} placeholder="reps" />
+                        <button type="button" className="ghost danger mini" onClick={() => removeSet(entry.id, index)} aria-label="Remove set">×</button>
+                      </div>
+                    ))}
+                  </div>
+
+                  <label className="field">
+                    <span>Exercise note</span>
+                    <input value={entry.note} onChange={(event) => updateEntryNote(entry.id, event.target.value)} placeholder="Heavy, easy, form note..." />
+                  </label>
+                  <button type="button" className="secondary small" onClick={() => addSameSet(entry.id)}>+ Same Set</button>
+                </div>
+              );
+            })}
+          </div>
+
+          <label className="field">
+            <span>Workout note</span>
+            <textarea value={note} onChange={(event) => setNote(event.target.value)} placeholder="Energy, sleep, pump, cardio after, etc." />
+          </label>
+
+          <button className="primary" type="submit">Save Sweat</button>
+        </form>
+      </article>
+
+      <article className="card">
+        <h3>Workout History</h3>
+        <div className="log-list">
+          {workouts.length === 0 && <p>No workouts yet.</p>}
+          {workouts.map((workout) => (
+            <div className="workout-history-card" key={workout.id}>
+              <div className="entry-header">
+                <div>
+                  <strong>{workout.title}</strong>
+                  <p>{workout.date}</p>
+                </div>
+                <button className="ghost danger" onClick={() => onDelete(workout.id)}>Delete</button>
+              </div>
+              {workout.entries.map((entry) => (
+                <div className="history-exercise" key={entry.id}>
+                  <strong>{entry.exerciseName}</strong>
+                  <p>{formatSets(entry.sets)}</p>
+                  {entry.note && <small>{entry.note}</small>}
+                </div>
+              ))}
+              {workout.note && <small>{workout.note}</small>}
+            </div>
+          ))}
+        </div>
+      </article>
+    </section>
+  );
+}
+
+function ExerciseLibrary({ workouts }) {
+  const groups = useMemo(() => {
+    return exercises.reduce((acc, exercise) => {
+      acc[exercise.muscleGroup] = acc[exercise.muscleGroup] || [];
+      acc[exercise.muscleGroup].push(exercise);
+      return acc;
+    }, {});
+  }, []);
+
+  return (
+    <section className="card">
+      <h2>Exercise Library</h2>
+      <p className="muted">Your current cave-approved machine list.</p>
+
+      <div className="exercise-grid">
+        {Object.entries(groups).map(([group, items]) => (
+          <div className="exercise-group" key={group}>
+            <h3>{group}</h3>
+            {items.map((exercise) => {
+              const last = getLastExerciseEntry(workouts, exercise.id);
+              return (
+                <div className="exercise-card" key={exercise.id}>
+                  <strong>{exercise.name}</strong>
+                  <span>{exercise.norwegianName}</span>
+                  <p>{exercise.defaultSets} x {exercise.defaultReps} · {exercise.equipment}</p>
+                  {last && <p className="last-line">Last: {formatSets(last.entry.sets)}</p>}
+                  <small>{exercise.note}</small>
+                </div>
+              );
+            })}
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function Settings({ profile, onSave, onExport, onImport }) {
+  const [form, setForm] = useState(profile);
+  const age = form.birthYear ? new Date().getFullYear() - Number(form.birthYear) : null;
+
+  function handleSubmit(event) {
+    event.preventDefault();
+    onSave(form);
+  }
+
+  function handleImport(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const data = JSON.parse(reader.result);
+        onImport(data);
+      } catch {
+        alert('Could not read that file. Choose a valid Caveman backup .json file.');
+      }
+    };
+    reader.readAsText(file);
+    event.target.value = '';
+  }
+
+  return (
+    <section className="grid two">
+      <article className="card">
+        <h2>Settings</h2>
+        <p className="muted">Profile data is used for BMI and goal context.</p>
+
+        <form onSubmit={handleSubmit} className="form-grid">
+          <Input label="Name" value={form.name} onChange={(value) => setForm({ ...form, name: value })} />
+          <Input label="Height cm" type="number" value={form.heightCm} onChange={(value) => setForm({ ...form, heightCm: value })} />
+          <Input label="Birth year" type="number" value={form.birthYear} onChange={(value) => setForm({ ...form, birthYear: value })} />
+          <Input label="Target weight kg" type="number" step="0.1" value={form.targetWeightKg} onChange={(value) => setForm({ ...form, targetWeightKg: value })} />
+          <Input label="Target waist cm" type="number" step="0.1" value={form.targetWaistCm} onChange={(value) => setForm({ ...form, targetWaistCm: value })} />
+          <label className="field full">
+            <span>Goal</span>
+            <input value={form.goal} onChange={(event) => setForm({ ...form, goal: event.target.value })} />
+          </label>
+          <button className="primary full" type="submit">Save Settings</button>
+        </form>
+      </article>
+
+      <article className="card stats-card">
+        <Stat label="Height" value={`${form.heightCm || '-'} cm`} />
+        <Stat label="Age" value={age || '-'} />
+        <Stat label="Goal" value={form.goal || '-'} />
+        <Stat label="Target waist" value={form.targetWaistCm ? `${form.targetWaistCm} cm` : '-'} />
+      </article>
+
+      <article className="card full data-card">
+        <h2>Backup</h2>
+        <p className="muted">Export before switching devices or browsers. Import replaces the data on this device.</p>
+        <div className="backup-actions">
+          <button className="secondary" type="button" onClick={onExport}>Export Data</button>
+          <label className="secondary import-button">
+            Import Data
+            <input type="file" accept="application/json,.json" onChange={handleImport} />
+          </label>
+        </div>
+      </article>
+    </section>
+  );
+}
+
+function Input({ label, value, onChange, type = 'text', step }) {
+  return (
+    <label className="field">
+      <span>{label}</span>
+      <input type={type} step={step} value={value} onChange={(event) => onChange(event.target.value)} />
+    </label>
+  );
+}
+
+export default App;
