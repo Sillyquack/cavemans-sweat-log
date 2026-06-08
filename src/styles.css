@@ -427,6 +427,51 @@ small {
   font-size: 0.85rem;
 }
 
+.weekly-goal-card {
+  display: grid;
+  gap: 16px;
+}
+
+.streak-pill {
+  min-width: 150px;
+  padding: 12px 14px;
+  border: 1px solid var(--accent-line);
+  border-radius: 18px;
+  background: var(--accent-soft);
+}
+
+.streak-pill span {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.streak-pill strong {
+  font-size: 1.1rem;
+}
+
+.goal-progress {
+  height: 14px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.055);
+}
+
+.goal-progress-bar {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--accent), var(--ember));
+  transition: width 0.2s ease;
+}
+
+.weekly-goal-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
 .section-heading {
   display: flex;
   justify-content: space-between;
@@ -839,6 +884,14 @@ small {
   }
 
   .compact-select {
+    min-width: 0;
+  }
+
+  .weekly-goal-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .streak-pill {
     min-width: 0;
   }
 

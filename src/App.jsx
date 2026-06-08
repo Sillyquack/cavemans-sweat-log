@@ -138,6 +138,8 @@ const kgOptions = Array.from({ length: 81 }, (_, index) => {
 
 const repOptions = Array.from({ length: 30 }, (_, index) => index + 1);
 
+const DEFAULT_WEEKLY_WORKOUT_GOAL = 3;
+
 const workoutTemplates = [
   {
     id: 'upper-body',
@@ -274,6 +276,95 @@ function getExerciseProgress(workouts, exerciseId) {
   }
 
   return [...progressByDate.values()].sort((a, b) => new Date(a.date) - new Date(b.date));
+}
+
+function parseWorkoutDate(value) {
+  if (!value) return null;
+  const isoMatch = String(value).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  const date = isoMatch
+    ? new Date(Number(isoMatch[1]), Number(isoMatch[2]) - 1, Number(isoMatch[3]))
+    : new Date(value);
+
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function startOfDay(date) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+function getWeekStart(date) {
+  const start = startOfDay(date);
+  const day = start.getDay();
+  const daysSinceMonday = day === 0 ? 6 : day - 1;
+  start.setDate(start.getDate() - daysSinceMonday);
+  return start;
+}
+
+function addDays(date, days) {
+  const next = new Date(date);
+  next.setDate(next.getDate() + days);
+  return next;
+}
+
+function formatISODate(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function getWeeklyWorkoutStats(workouts, weeklyGoal = DEFAULT_WEEKLY_WORKOUT_GOAL) {
+  const today = startOfDay(new Date());
+  const weekStart = getWeekStart(today);
+  const nextWeekStart = addDays(weekStart, 7);
+  const weeklyCounts = new Map();
+  let latestDate = null;
+  let workoutsThisWeek = 0;
+
+  for (const workout of workouts) {
+    const workoutDate = parseWorkoutDate(workout.date);
+    if (!workoutDate) continue;
+
+    const workoutDay = startOfDay(workoutDate);
+    const workoutWeekStart = getWeekStart(workoutDay);
+    const weekKey = formatISODate(workoutWeekStart);
+    weeklyCounts.set(weekKey, (weeklyCounts.get(weekKey) || 0) + 1);
+
+    if (workoutDay >= weekStart && workoutDay < nextWeekStart) {
+      workoutsThisWeek += 1;
+    }
+
+    if (!latestDate || workoutDay > latestDate) {
+      latestDate = workoutDay;
+    }
+  }
+
+  const remainingWorkouts = Math.max(weeklyGoal - workoutsThisWeek, 0);
+  let streakStart = workoutsThisWeek >= weeklyGoal ? weekStart : addDays(weekStart, -7);
+  let workoutStreak = 0;
+
+  while ((weeklyCounts.get(formatISODate(streakStart)) || 0) >= weeklyGoal) {
+    workoutStreak += 1;
+    streakStart = addDays(streakStart, -7);
+  }
+
+  let message = 'Start this week with one solid session.';
+  if (workoutsThisWeek >= weeklyGoal) {
+    message = 'Goal reached this week. Strong work.';
+  } else if (remainingWorkouts === 1) {
+    message = 'One more workout to hit your weekly goal.';
+  }
+
+  return {
+    workoutsThisWeek,
+    weeklyGoal,
+    remainingWorkouts,
+    latestWorkoutDate: latestDate ? formatISODate(latestDate) : null,
+    daysSinceLastWorkout: latestDate ? Math.max(0, Math.floor((today - latestDate) / 86400000)) : null,
+    workoutStreak,
+    progressPercent: Math.min((workoutsThisWeek / weeklyGoal) * 100, 100),
+    message
+  };
 }
 
 function formatDifference(value, unit) {
@@ -565,6 +656,7 @@ function Dashboard({ profile, bodyLogs, workouts }) {
     () => getExerciseProgress(workouts, activeProgressExerciseId),
     [workouts, activeProgressExerciseId]
   );
+  const weeklyStats = useMemo(() => getWeeklyWorkoutStats(workouts), [workouts]);
   const thisWeekWorkouts = useMemo(() => {
     const now = new Date();
     const sevenDaysAgo = new Date(now);
@@ -591,6 +683,8 @@ function Dashboard({ profile, bodyLogs, workouts }) {
 
       <TrendCard title="Weight Trend" unit="kg" logs={weightLogs} />
       <TrendCard title="Waist Trend" unit="cm" logs={waistLogs} />
+
+      <WeeklyGoalCard stats={weeklyStats} />
 
       <article className="card stats-card">
         <h3>Workout Summary</h3>
@@ -671,6 +765,34 @@ function Dashboard({ profile, bodyLogs, workouts }) {
         )}
       </article>
     </section>
+  );
+}
+
+function WeeklyGoalCard({ stats }) {
+  return (
+    <article className="card weekly-goal-card">
+      <div className="section-heading">
+        <div>
+          <h3>Weekly Goal</h3>
+          <p className="muted">{stats.message}</p>
+        </div>
+        <div className="streak-pill">
+          <span>Workout Streak</span>
+          <strong>{stats.workoutStreak} week{stats.workoutStreak === 1 ? '' : 's'}</strong>
+        </div>
+      </div>
+
+      <div className="goal-progress" aria-label="Weekly goal progress">
+        <div className="goal-progress-bar" style={{ width: `${stats.progressPercent}%` }} />
+      </div>
+
+      <div className="weekly-goal-grid">
+        <Stat label="This week" value={`${stats.workoutsThisWeek} / ${stats.weeklyGoal}`} />
+        <Stat label="Remaining" value={stats.remainingWorkouts} />
+        <Stat label="Latest workout" value={stats.latestWorkoutDate || '-'} />
+        <Stat label="Days since last" value={stats.daysSinceLastWorkout ?? '-'} />
+      </div>
+    </article>
   );
 }
 
