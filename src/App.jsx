@@ -2,11 +2,34 @@ import { useMemo, useState } from 'react';
 import { exercises } from './data/exercises.js';
 import { calculateBMI, formatNumber, getBMICategory, getTodayISO, sortByDateDesc } from './utils/calculations.js';
 
-const STORAGE_KEYS = {
+const LEGACY_STORAGE_KEYS = {
   profile: 'caveman-profile',
   bodyLogs: 'caveman-body-logs',
   workouts: 'caveman-workouts'
 };
+
+const users = [
+  {
+    username: 'bobby',
+    password: 'bobby123',
+    name: 'Bobby'
+  },
+  {
+    username: 'manager',
+    password: 'manager123',
+    name: 'Manager'
+  },
+  {
+    username: 'mircea',
+    password: 'mircea123',
+    name: 'Mircea'
+  },
+  {
+    username: 'natasha',
+    password: 'natasha123',
+    name: 'Natasha'
+  }
+];
 
 const defaultProfile = {
   name: 'Bobby',
@@ -16,6 +39,21 @@ const defaultProfile = {
   targetWeightKg: '',
   targetWaistCm: ''
 };
+
+function getDefaultProfile(user) {
+  return {
+    ...defaultProfile,
+    name: user?.name || defaultProfile.name
+  };
+}
+
+function getUserStorageKeys(username) {
+  return {
+    profile: `caveman:${username}:profile`,
+    bodyLogs: `caveman:${username}:body-logs`,
+    workouts: `caveman:${username}:workouts`
+  };
+}
 
 function loadFromStorage(key, fallback) {
   try {
@@ -28,6 +66,39 @@ function loadFromStorage(key, fallback) {
 
 function saveToStorage(key, value) {
   localStorage.setItem(key, JSON.stringify(value));
+}
+
+function hasStoredValue(key) {
+  return localStorage.getItem(key) !== null;
+}
+
+function migrateLegacyDataIfNeeded(user) {
+  if (user.username !== 'bobby') return;
+
+  const keys = getUserStorageKeys(user.username);
+  const hasUserData = hasStoredValue(keys.profile) || hasStoredValue(keys.bodyLogs) || hasStoredValue(keys.workouts);
+  if (hasUserData) return;
+
+  if (hasStoredValue(LEGACY_STORAGE_KEYS.profile)) {
+    saveToStorage(keys.profile, loadFromStorage(LEGACY_STORAGE_KEYS.profile, getDefaultProfile(user)));
+  }
+  if (hasStoredValue(LEGACY_STORAGE_KEYS.bodyLogs)) {
+    saveToStorage(keys.bodyLogs, loadFromStorage(LEGACY_STORAGE_KEYS.bodyLogs, []));
+  }
+  if (hasStoredValue(LEGACY_STORAGE_KEYS.workouts)) {
+    saveToStorage(keys.workouts, loadFromStorage(LEGACY_STORAGE_KEYS.workouts, []));
+  }
+}
+
+function loadUserData(user) {
+  migrateLegacyDataIfNeeded(user);
+
+  const keys = getUserStorageKeys(user.username);
+  return {
+    profile: loadFromStorage(keys.profile, getDefaultProfile(user)),
+    bodyLogs: loadFromStorage(keys.bodyLogs, []),
+    workouts: loadFromStorage(keys.workouts, [])
+  };
 }
 
 function getExerciseById(exerciseId) {
@@ -49,17 +120,54 @@ function formatSets(sets = []) {
 }
 
 function App() {
+  const [currentUser, setCurrentUser] = useState(null);
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [profile, setProfile] = useState(() => loadFromStorage(STORAGE_KEYS.profile, defaultProfile));
-  const [bodyLogs, setBodyLogs] = useState(() => loadFromStorage(STORAGE_KEYS.bodyLogs, []));
-  const [workouts, setWorkouts] = useState(() => loadFromStorage(STORAGE_KEYS.workouts, []));
+  const [profile, setProfile] = useState(defaultProfile);
+  const [bodyLogs, setBodyLogs] = useState([]);
+  const [workouts, setWorkouts] = useState([]);
+  const isManager = currentUser?.username === 'manager';
+  const currentStorageKeys = currentUser && !isManager ? getUserStorageKeys(currentUser.username) : null;
+
+  function handleLogin(username, password) {
+    const normalizedUsername = username.trim().toLowerCase();
+    const matchingUser = users.find((user) => user.username.toLowerCase() === normalizedUsername);
+
+    if (!matchingUser || matchingUser.password !== password) {
+      return false;
+    }
+
+    if (matchingUser.username !== 'manager') {
+      const userData = loadUserData(matchingUser);
+      setProfile(userData.profile);
+      setBodyLogs(userData.bodyLogs);
+      setWorkouts(userData.workouts);
+    } else {
+      setProfile(defaultProfile);
+      setBodyLogs([]);
+      setWorkouts([]);
+    }
+
+    setActiveTab('dashboard');
+    setCurrentUser(matchingUser);
+    return true;
+  }
+
+  function handleLogout() {
+    setCurrentUser(null);
+    setActiveTab('dashboard');
+    setProfile(defaultProfile);
+    setBodyLogs([]);
+    setWorkouts([]);
+  }
 
   function updateProfile(nextProfile) {
+    if (!currentStorageKeys) return;
     setProfile(nextProfile);
-    saveToStorage(STORAGE_KEYS.profile, nextProfile);
+    saveToStorage(currentStorageKeys.profile, nextProfile);
   }
 
   function addBodyLog(log) {
+    if (!currentStorageKeys) return;
     const bmi = calculateBMI(log.weightKg, profile.heightCm);
     const nextLog = {
       ...log,
@@ -69,16 +177,18 @@ function App() {
     };
     const nextLogs = sortByDateDesc([nextLog, ...bodyLogs]);
     setBodyLogs(nextLogs);
-    saveToStorage(STORAGE_KEYS.bodyLogs, nextLogs);
+    saveToStorage(currentStorageKeys.bodyLogs, nextLogs);
   }
 
   function deleteBodyLog(id) {
+    if (!currentStorageKeys) return;
     const nextLogs = bodyLogs.filter((log) => log.id !== id);
     setBodyLogs(nextLogs);
-    saveToStorage(STORAGE_KEYS.bodyLogs, nextLogs);
+    saveToStorage(currentStorageKeys.bodyLogs, nextLogs);
   }
 
   function addWorkout(workout) {
+    if (!currentStorageKeys) return;
     const nextWorkout = {
       ...workout,
       id: crypto.randomUUID(),
@@ -86,20 +196,53 @@ function App() {
     };
     const nextWorkouts = sortByDateDesc([nextWorkout, ...workouts]);
     setWorkouts(nextWorkouts);
-    saveToStorage(STORAGE_KEYS.workouts, nextWorkouts);
+    saveToStorage(currentStorageKeys.workouts, nextWorkouts);
   }
 
   function deleteWorkout(id) {
+    if (!currentStorageKeys) return;
     const nextWorkouts = workouts.filter((workout) => workout.id !== id);
     setWorkouts(nextWorkouts);
-    saveToStorage(STORAGE_KEYS.workouts, nextWorkouts);
+    saveToStorage(currentStorageKeys.workouts, nextWorkouts);
   }
 
   function exportData() {
+    if (isManager) {
+      const backup = {
+        app: "The Caveman's Sweat Log",
+        version: 2,
+        exportedAt: new Date().toISOString(),
+        managerExport: true,
+        users: users
+          .filter((user) => user.username !== 'manager')
+          .map((user) => {
+            const keys = getUserStorageKeys(user.username);
+            return {
+              username: user.username,
+              profile: loadFromStorage(keys.profile, getDefaultProfile(user)),
+              bodyLogs: loadFromStorage(keys.bodyLogs, []),
+              workouts: loadFromStorage(keys.workouts, [])
+            };
+          })
+      };
+
+      const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `cavemans-sweat-log-manager-backup-${getTodayISO()}.json`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+      return;
+    }
+
     const backup = {
       app: 'The Caveman’s Sweat Log',
       version: 1,
       exportedAt: new Date().toISOString(),
+      username: currentUser.username,
       profile,
       bodyLogs,
       workouts
@@ -117,12 +260,17 @@ function App() {
   }
 
   function importData(data) {
+    if (!currentStorageKeys) {
+      alert('Manager cannot import normal workout data.');
+      return;
+    }
+
     if (!data || typeof data !== 'object') {
       alert('Could not import file. The file does not look like a valid backup.');
       return;
     }
 
-    const nextProfile = data.profile && typeof data.profile === 'object' ? data.profile : defaultProfile;
+    const nextProfile = data.profile && typeof data.profile === 'object' ? data.profile : getDefaultProfile(currentUser);
     const nextBodyLogs = Array.isArray(data.bodyLogs) ? data.bodyLogs : [];
     const nextWorkouts = Array.isArray(data.workouts) ? data.workouts : [];
 
@@ -133,9 +281,36 @@ function App() {
     setBodyLogs(nextBodyLogs);
     setWorkouts(nextWorkouts);
 
-    saveToStorage(STORAGE_KEYS.profile, nextProfile);
-    saveToStorage(STORAGE_KEYS.bodyLogs, nextBodyLogs);
-    saveToStorage(STORAGE_KEYS.workouts, nextWorkouts);
+    saveToStorage(currentStorageKeys.profile, nextProfile);
+    saveToStorage(currentStorageKeys.bodyLogs, nextBodyLogs);
+    saveToStorage(currentStorageKeys.workouts, nextWorkouts);
+  }
+
+  if (!currentUser) {
+    return <Login onLogin={handleLogin} />;
+  }
+
+  if (isManager) {
+    return (
+      <div className="app-shell">
+        <header className="hero">
+          <div>
+            <p className="eyebrow">Manager</p>
+            <h1>Manager Dashboard</h1>
+            <p className="tagline">Overview and tools for managing the app.</p>
+          </div>
+          <div className="hero-card">
+            <span>Logged in as</span>
+            <strong>{currentUser.name}</strong>
+            <button className="ghost small" type="button" onClick={handleLogout}>Log out</button>
+          </div>
+        </header>
+
+        <main>
+          <ManagerDashboard profile={profile} bodyLogs={bodyLogs} workouts={workouts} users={users} onExport={exportData} />
+        </main>
+      </div>
+    );
   }
 
   return (
@@ -147,8 +322,9 @@ function App() {
           <p className="tagline">Lift. Log. Evolve.</p>
         </div>
         <div className="hero-card">
-          <span>Mode</span>
-          <strong>{profile.goal || 'Training'}</strong>
+          <span>Logged in as</span>
+          <strong>{currentUser.name}</strong>
+          <button className="ghost small" type="button" onClick={handleLogout}>Log out</button>
         </div>
       </header>
 
@@ -168,6 +344,40 @@ function App() {
         {activeTab === 'settings' && <Settings profile={profile} onSave={updateProfile} onExport={exportData} onImport={importData} />}
       </main>
     </div>
+  );
+}
+
+function Login({ onLogin }) {
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+
+  function handleSubmit(event) {
+    event.preventDefault();
+
+    if (onLogin(username, password)) {
+      setError('');
+      return;
+    }
+
+    setError('Username or password is wrong.');
+  }
+
+  return (
+    <main className="login-shell">
+      <section className="card login-card">
+        <p className="eyebrow">The Cave Project</p>
+        <h1>The Caveman's Sweat Log</h1>
+        <p className="muted">Enter your username and password to continue.</p>
+
+        <form onSubmit={handleSubmit} className="form-grid login-form">
+          <Input label="Username" value={username} onChange={setUsername} />
+          <Input label="Password" type="password" value={password} onChange={setPassword} />
+          {error && <p className="error-message full">{error}</p>}
+          <button className="primary full" type="submit">Log In</button>
+        </form>
+      </section>
+    </main>
   );
 }
 
@@ -234,6 +444,145 @@ function Stat({ label, value }) {
       <span>{label}</span>
       <strong>{value}</strong>
     </div>
+  );
+}
+
+function ManagerDashboard({ users, onExport }) {
+  const regularUsers = users.filter((user) => user.username !== 'manager');
+  const userSummaries = regularUsers.map((user) => {
+    const keys = getUserStorageKeys(user.username);
+    const profile = loadFromStorage(keys.profile, getDefaultProfile(user));
+    const bodyLogs = loadFromStorage(keys.bodyLogs, []);
+    const workouts = loadFromStorage(keys.workouts, []);
+    const workoutEntries = workouts.reduce((total, workout) => total + (workout.entries?.length || 0), 0);
+
+    return {
+      user,
+      keys,
+      profile,
+      bodyLogs,
+      workouts,
+      workoutEntries,
+      latestBody: bodyLogs[0],
+      latestWorkout: workouts[0]
+    };
+  });
+
+  const totalBodyLogs = userSummaries.reduce((total, summary) => total + summary.bodyLogs.length, 0);
+  const totalWorkouts = userSummaries.reduce((total, summary) => total + summary.workouts.length, 0);
+  const totalWorkoutEntries = userSummaries.reduce((total, summary) => total + summary.workoutEntries, 0);
+  const recentItems = userSummaries
+    .flatMap((summary) => [
+      summary.latestBody
+        ? {
+            label: `${summary.user.name} body log`,
+            date: summary.latestBody.date,
+            detail: `${summary.latestBody.weightKg || '-'} kg, waist ${summary.latestBody.waistCm || '-'} cm`
+          }
+        : null,
+      summary.latestWorkout
+        ? {
+            label: `${summary.user.name} workout`,
+            date: summary.latestWorkout.date,
+            detail: `${summary.latestWorkout.title} (${summary.latestWorkout.entries?.length || 0} entries)`
+          }
+        : null
+    ])
+    .filter(Boolean)
+    .sort((a, b) => new Date(b.date) - new Date(a.date));
+
+  const storageOverview = userSummaries.flatMap((summary) => [
+    { key: summary.keys.profile, description: `Profile for ${summary.profile.name || summary.user.name}` },
+    { key: summary.keys.bodyLogs, description: `${summary.bodyLogs.length} body logs` },
+    { key: summary.keys.workouts, description: `${summary.workouts.length} workouts` }
+  ]);
+  const legacyStorageOverview = [
+    { key: LEGACY_STORAGE_KEYS.profile, description: hasStoredValue(LEGACY_STORAGE_KEYS.profile) ? 'Old shared profile key exists' : 'Old shared profile key not found' },
+    { key: LEGACY_STORAGE_KEYS.bodyLogs, description: hasStoredValue(LEGACY_STORAGE_KEYS.bodyLogs) ? 'Old shared body logs key exists' : 'Old shared body logs key not found' },
+    { key: LEGACY_STORAGE_KEYS.workouts, description: hasStoredValue(LEGACY_STORAGE_KEYS.workouts) ? 'Old shared workouts key exists' : 'Old shared workouts key not found' }
+  ];
+
+  return (
+    <section className="grid two">
+      <article className="card big-card">
+        <p className="eyebrow">Manager</p>
+        <h2>Manager Dashboard</h2>
+        <p>Overview and tools for managing the app.</p>
+      </article>
+
+      <article className="card stats-card">
+        <Stat label="Regular users" value={regularUsers.length} />
+        <Stat label="Body logs" value={totalBodyLogs} />
+        <Stat label="Workouts" value={totalWorkouts} />
+        <Stat label="Workout entries" value={totalWorkoutEntries} />
+      </article>
+
+      <article className="card">
+        <h3>User Overview</h3>
+        <div className="simple-list">
+          {users.map((user) => (
+            <p key={user.username}><strong>{user.name}</strong> · {user.username}</p>
+          ))}
+        </div>
+      </article>
+
+      <article className="card stats-card">
+        <h3>App Statistics</h3>
+        <Stat label="Hardcoded login users" value={users.length} />
+        <Stat label="Namespaced user datasets" value={storageOverview.length} />
+        <Stat label="Saved local datasets" value={storageOverview.length} />
+      </article>
+
+      <article className="card">
+        <h3>Local Storage Overview</h3>
+        <div className="simple-list">
+          {storageOverview.map((item) => (
+            <div key={item.key}>
+              <p><strong>{item.key}</strong></p>
+              <p>{item.description}</p>
+            </div>
+          ))}
+          {legacyStorageOverview.map((item) => (
+            <div key={item.key}>
+              <p><strong>{item.key}</strong></p>
+              <p>{item.description}</p>
+            </div>
+          ))}
+        </div>
+      </article>
+
+      <article className="card">
+        <h3>Export Data</h3>
+        <p className="muted">Download the current browser-local profile, body logs, and workout logs.</p>
+        <button className="secondary" type="button" onClick={onExport}>Export Data</button>
+      </article>
+
+      <article className="card">
+        <h3>Maintenance Tools</h3>
+        <p className="muted">Reset and cleanup tools can be added here later. No destructive tools are enabled yet.</p>
+      </article>
+
+      <article className="card">
+        <h3>Recent Activity</h3>
+        {recentItems.length ? (
+          <div className="simple-list">
+            {recentItems.map((item) => (
+              <div key={item.label}>
+                <p><strong>{item.label}</strong> · {item.date}</p>
+                <p>{item.detail}</p>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p>No activity has been logged yet.</p>
+        )}
+      </article>
+
+      <article className="card">
+        <h3>Future Admin Tools</h3>
+        <p className="muted">Future manager tools could include per-user data, user status, import review, and safer maintenance controls.</p>
+      </article>
+    </section>
   );
 }
 

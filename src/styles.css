@@ -79,6 +79,36 @@ button:disabled {
   padding: 20px 0 56px;
 }
 
+.login-shell {
+  width: min(520px, calc(100% - 24px));
+  min-height: 100vh;
+  margin: 0 auto;
+  display: grid;
+  place-items: center;
+  padding: 24px 0;
+}
+
+.login-card {
+  width: 100%;
+}
+
+.login-card h1 {
+  margin: 0 0 10px;
+  font-size: clamp(2rem, 7vw, 3.2rem);
+  line-height: 0.95;
+  letter-spacing: -0.04em;
+}
+
+.login-form {
+  margin-top: 22px;
+}
+
+.error-message {
+  margin: 0;
+  color: var(--danger);
+  font-weight: 800;
+}
+
 .hero {
   display: flex;
   justify-content: space-between;
