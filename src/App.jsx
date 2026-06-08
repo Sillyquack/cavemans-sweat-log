@@ -123,6 +123,29 @@ const kgOptions = Array.from({ length: 81 }, (_, index) => {
 
 const repOptions = Array.from({ length: 30 }, (_, index) => index + 1);
 
+const workoutTemplates = [
+  {
+    id: 'upper-body',
+    name: 'Upper Body',
+    exerciseIds: ['chest-press', 'wide-chest-press', 'pectoral-fly', 'lat-pulldown', 'machine-row', 'preacher-curl', 'ab-crunch']
+  },
+  {
+    id: 'leg-day',
+    name: 'Leg Day',
+    exerciseIds: ['leg-extension', 'leg-curl', 'gluteus-kickback', 'hip-abduction', 'hip-adduction', 'calf-raise']
+  },
+  {
+    id: 'cardio',
+    name: 'Cardio',
+    exerciseIds: ['treadmill']
+  },
+  {
+    id: 'full-body',
+    name: 'Full Body',
+    exerciseIds: ['chest-press', 'lat-pulldown', 'machine-row', 'leg-extension', 'leg-curl', 'ab-crunch', 'treadmill']
+  }
+];
+
 function parseSelectNumber(value) {
   if (value === '') return '';
   const number = Number(value);
@@ -777,6 +800,7 @@ function WorkoutLog({ workouts, onAdd, onDelete }) {
   const [note, setNote] = useState('');
   const [entries, setEntries] = useState([]);
   const [selectedExerciseId, setSelectedExerciseId] = useState(exercises[0].id);
+  const [selectedTemplateId, setSelectedTemplateId] = useState('');
 
   const selectedExercise = getExerciseById(selectedExerciseId);
   const lastSelected = getLastExerciseEntry(workouts, selectedExerciseId);
@@ -788,21 +812,44 @@ function WorkoutLog({ workouts, onAdd, onDelete }) {
     }, {});
   }, []);
 
-  function addExerciseEntry() {
-    const exercise = getExerciseById(selectedExerciseId);
-    const previous = getLastExerciseEntry(workouts, selectedExerciseId);
+  function createExerciseEntry(exercise, usePreviousSets = true) {
+    const previous = usePreviousSets ? getLastExerciseEntry(workouts, exercise.id) : null;
     const sets = previous?.entry?.sets?.length
       ? previous.entry.sets.map((set) => ({ kg: set.kg || '', reps: set.reps || exercise.defaultReps || 12 }))
       : Array.from({ length: exercise.defaultSets || 3 }, () => ({ kg: '', reps: exercise.defaultReps || 12 }));
 
-    const newEntry = {
+    return {
       id: crypto.randomUUID(),
       exerciseId: exercise.id,
       exerciseName: exercise.name,
       sets,
       note: ''
     };
-    setEntries([...entries, newEntry]);
+  }
+
+  function addExerciseEntry() {
+    const exercise = getExerciseById(selectedExerciseId);
+    setEntries([...entries, createExerciseEntry(exercise)]);
+  }
+
+  function applyTemplate() {
+    const template = workoutTemplates.find((item) => item.id === selectedTemplateId);
+    if (!template) return;
+
+    if (entries.length > 0) {
+      const ok = window.confirm('Apply template? This will add the template exercises to the workout you are already building.');
+      if (!ok) return;
+    }
+
+    const templateEntries = template.exerciseIds
+      .map((exerciseId) => getExerciseById(exerciseId))
+      .filter(Boolean)
+      .map((exercise) => createExerciseEntry(exercise, false));
+
+    if (entries.length === 0) {
+      setTitle(template.name);
+    }
+    setEntries([...entries, ...templateEntries]);
   }
 
   function updateSet(entryId, setIndex, field, value) {
@@ -855,6 +902,25 @@ function WorkoutLog({ workouts, onAdd, onDelete }) {
           <div className="form-grid">
             <Input label="Workout title" value={title} onChange={setTitle} />
             <Input label="Date" type="date" value={date} onChange={setDate} />
+          </div>
+
+          <div className="template-box">
+            <div>
+              <h3>Workout Templates</h3>
+              <p className="muted">Choose a template to quickly start a workout. You can adjust kg and reps before saving.</p>
+            </div>
+            <div className="template-actions">
+              <label className="field">
+                <span>Template</span>
+                <select value={selectedTemplateId} onChange={(event) => setSelectedTemplateId(event.target.value)}>
+                  <option value="">Choose template</option>
+                  {workoutTemplates.map((template) => (
+                    <option key={template.id} value={template.id}>{template.name}</option>
+                  ))}
+                </select>
+              </label>
+              <button type="button" className="secondary" onClick={applyTemplate} disabled={!selectedTemplateId}>Apply Template</button>
+            </div>
           </div>
 
           <div className="add-exercise-row">

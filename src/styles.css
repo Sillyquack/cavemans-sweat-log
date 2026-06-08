@@ -515,6 +515,27 @@ small {
   gap: 16px;
 }
 
+.template-box {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid var(--accent-line);
+  border-radius: 18px;
+  background: var(--accent-soft);
+}
+
+.template-box h3,
+.template-box p {
+  margin: 0;
+}
+
+.template-actions {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 12px;
+  align-items: end;
+}
+
 .add-exercise-row {
   display: grid;
   grid-template-columns: 1fr auto;
@@ -656,6 +677,7 @@ small {
   .hero,
   .grid.two,
   .form-grid,
+  .template-actions,
   .add-exercise-row {
     grid-template-columns: 1fr;
   }
