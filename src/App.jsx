@@ -32,19 +32,16 @@ const users = [
 ];
 
 const defaultProfile = {
-  name: 'Bobby',
-  heightCm: 185,
-  birthYear: 1989,
-  goal: 'Fat loss and muscle gain',
+  name: '',
+  heightCm: '',
+  birthYear: '',
+  goal: '',
   targetWeightKg: '',
   targetWaistCm: ''
 };
 
-function getDefaultProfile(user) {
-  return {
-    ...defaultProfile,
-    name: user?.name || defaultProfile.name
-  };
+function getEmptyProfile() {
+  return { ...defaultProfile };
 }
 
 function getUserStorageKeys(username) {
@@ -80,7 +77,7 @@ function migrateLegacyDataIfNeeded(user) {
   if (hasUserData) return;
 
   if (hasStoredValue(LEGACY_STORAGE_KEYS.profile)) {
-    saveToStorage(keys.profile, loadFromStorage(LEGACY_STORAGE_KEYS.profile, getDefaultProfile(user)));
+    saveToStorage(keys.profile, loadFromStorage(LEGACY_STORAGE_KEYS.profile, getEmptyProfile()));
   }
   if (hasStoredValue(LEGACY_STORAGE_KEYS.bodyLogs)) {
     saveToStorage(keys.bodyLogs, loadFromStorage(LEGACY_STORAGE_KEYS.bodyLogs, []));
@@ -95,7 +92,7 @@ function loadUserData(user) {
 
   const keys = getUserStorageKeys(user.username);
   return {
-    profile: loadFromStorage(keys.profile, getDefaultProfile(user)),
+    profile: loadFromStorage(keys.profile, getEmptyProfile()),
     bodyLogs: loadFromStorage(keys.bodyLogs, []),
     workouts: loadFromStorage(keys.workouts, [])
   };
@@ -122,7 +119,7 @@ function formatSets(sets = []) {
 function App() {
   const [currentUser, setCurrentUser] = useState(null);
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [profile, setProfile] = useState(defaultProfile);
+  const [profile, setProfile] = useState(() => getEmptyProfile());
   const [bodyLogs, setBodyLogs] = useState([]);
   const [workouts, setWorkouts] = useState([]);
   const isManager = currentUser?.username === 'manager';
@@ -142,7 +139,7 @@ function App() {
       setBodyLogs(userData.bodyLogs);
       setWorkouts(userData.workouts);
     } else {
-      setProfile(defaultProfile);
+      setProfile(getEmptyProfile());
       setBodyLogs([]);
       setWorkouts([]);
     }
@@ -155,7 +152,7 @@ function App() {
   function handleLogout() {
     setCurrentUser(null);
     setActiveTab('dashboard');
-    setProfile(defaultProfile);
+    setProfile(getEmptyProfile());
     setBodyLogs([]);
     setWorkouts([]);
   }
@@ -219,7 +216,7 @@ function App() {
             const keys = getUserStorageKeys(user.username);
             return {
               username: user.username,
-              profile: loadFromStorage(keys.profile, getDefaultProfile(user)),
+              profile: loadFromStorage(keys.profile, getEmptyProfile()),
               bodyLogs: loadFromStorage(keys.bodyLogs, []),
               workouts: loadFromStorage(keys.workouts, [])
             };
@@ -270,7 +267,7 @@ function App() {
       return;
     }
 
-    const nextProfile = data.profile && typeof data.profile === 'object' ? data.profile : getDefaultProfile(currentUser);
+    const nextProfile = data.profile && typeof data.profile === 'object' ? data.profile : getEmptyProfile();
     const nextBodyLogs = Array.isArray(data.bodyLogs) ? data.bodyLogs : [];
     const nextWorkouts = Array.isArray(data.workouts) ? data.workouts : [];
 
@@ -451,7 +448,7 @@ function ManagerDashboard({ users, onExport }) {
   const regularUsers = users.filter((user) => user.username !== 'manager');
   const userSummaries = regularUsers.map((user) => {
     const keys = getUserStorageKeys(user.username);
-    const profile = loadFromStorage(keys.profile, getDefaultProfile(user));
+    const profile = loadFromStorage(keys.profile, getEmptyProfile());
     const bodyLogs = loadFromStorage(keys.bodyLogs, []);
     const workouts = loadFromStorage(keys.workouts, []);
     const workoutEntries = workouts.reduce((total, workout) => total + (workout.entries?.length || 0), 0);
