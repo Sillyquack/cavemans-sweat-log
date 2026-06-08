@@ -225,6 +225,57 @@ function getPersonalRecords(workouts) {
     .slice(0, 8);
 }
 
+function getExerciseProgressOptions(workouts) {
+  const options = new Map();
+
+  for (const workout of sortByDateDesc(workouts)) {
+    for (const entry of workout.entries || []) {
+      if (!entry.exerciseId || options.has(entry.exerciseId)) continue;
+      if (!getValidSets(entry.sets).length) continue;
+
+      options.set(entry.exerciseId, {
+        exerciseId: entry.exerciseId,
+        exerciseName: entry.exerciseName
+      });
+    }
+  }
+
+  return [...options.values()];
+}
+
+function getExerciseProgress(workouts, exerciseId) {
+  if (!exerciseId) return [];
+
+  const progressByDate = new Map();
+
+  for (const workout of workouts) {
+    for (const entry of workout.entries || []) {
+      if (entry.exerciseId !== exerciseId) continue;
+
+      const validSets = getValidSets(entry.sets);
+      if (!validSets.length) continue;
+
+      const current = progressByDate.get(workout.date) || {
+        date: workout.date,
+        bestKg: null,
+        bestSetVolume: null,
+        totalVolume: 0
+      };
+
+      for (const set of validSets) {
+        const volume = set.kg * set.reps;
+        current.bestKg = current.bestKg === null ? set.kg : Math.max(current.bestKg, set.kg);
+        current.bestSetVolume = current.bestSetVolume === null ? volume : Math.max(current.bestSetVolume, volume);
+        current.totalVolume += volume;
+      }
+
+      progressByDate.set(workout.date, current);
+    }
+  }
+
+  return [...progressByDate.values()].sort((a, b) => new Date(a.date) - new Date(b.date));
+}
+
 function formatDifference(value, unit) {
   if (value === null) return '-';
   if (value === 0) return `0 ${unit}`;
@@ -505,6 +556,15 @@ function Dashboard({ profile, bodyLogs, workouts }) {
   const previousWaist = waistLogs[1]?.value ?? null;
   const totalWorkoutEntries = workouts.reduce((total, workout) => total + (workout.entries?.length || 0), 0);
   const personalRecords = useMemo(() => getPersonalRecords(workouts), [workouts]);
+  const exerciseProgressOptions = useMemo(() => getExerciseProgressOptions(workouts), [workouts]);
+  const [selectedProgressExerciseId, setSelectedProgressExerciseId] = useState('');
+  const activeProgressExerciseId = exerciseProgressOptions.some((option) => option.exerciseId === selectedProgressExerciseId)
+    ? selectedProgressExerciseId
+    : exerciseProgressOptions[0]?.exerciseId || '';
+  const exerciseProgress = useMemo(
+    () => getExerciseProgress(workouts, activeProgressExerciseId),
+    [workouts, activeProgressExerciseId]
+  );
   const thisWeekWorkouts = useMemo(() => {
     const now = new Date();
     const sevenDaysAgo = new Date(now);
@@ -577,6 +637,13 @@ function Dashboard({ profile, bodyLogs, workouts }) {
         )}
       </article>
 
+      <ExerciseProgressCard
+        options={exerciseProgressOptions}
+        selectedExerciseId={activeProgressExerciseId}
+        onSelectExercise={setSelectedProgressExerciseId}
+        progress={exerciseProgress}
+      />
+
       <article className="card">
         <h3>Latest Body Log</h3>
         {latestBody ? (
@@ -604,6 +671,81 @@ function Dashboard({ profile, bodyLogs, workouts }) {
         )}
       </article>
     </section>
+  );
+}
+
+function ExerciseProgressCard({ options, selectedExerciseId, onSelectExercise, progress }) {
+  const chartPoints = progress.slice(-8);
+  const values = chartPoints.map((point) => point.totalVolume);
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const range = max - min || 1;
+  const pathPoints = chartPoints.map((point, index) => {
+    const x = chartPoints.length === 1 ? 50 : (index / (chartPoints.length - 1)) * 100;
+    const y = 90 - ((point.totalVolume - min) / range) * 70;
+    return `${x},${y}`;
+  }).join(' ');
+
+  return (
+    <article className="card full">
+      <div className="section-heading">
+        <div>
+          <h3>Exercise Progress</h3>
+          <p className="muted">Track best kg and volume over time for one exercise.</p>
+        </div>
+        <label className="compact-select">
+          <span>Exercise</span>
+          <select value={selectedExerciseId} onChange={(event) => onSelectExercise(event.target.value)}>
+            {options.map((option) => (
+              <option key={option.exerciseId} value={option.exerciseId}>
+                {option.exerciseName}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+
+      {!options.length ? (
+        <p className="muted">Log workouts to see exercise progress.</p>
+      ) : progress.length < 2 ? (
+        <p className="muted">Log this exercise more than once to see progress over time.</p>
+      ) : (
+        <div className="exercise-progress">
+          <div className="trend-card">
+            <svg viewBox="0 0 100 100" role="img" aria-label="Exercise progress chart" preserveAspectRatio="none">
+              <polyline points={pathPoints} />
+              {chartPoints.map((point, index) => {
+                const x = chartPoints.length === 1 ? 50 : (index / (chartPoints.length - 1)) * 100;
+                const y = 90 - ((point.totalVolume - min) / range) * 70;
+                return <circle key={`${point.date}-${index}`} cx={x} cy={y} r="2.5" />;
+              })}
+            </svg>
+            <div className="trend-labels">
+              <span>{chartPoints[0].date}</span>
+              <strong>{formatNumber(chartPoints[chartPoints.length - 1].totalVolume, 0)} volume</strong>
+              <span>{chartPoints[chartPoints.length - 1].date}</span>
+            </div>
+          </div>
+
+          <div className="exercise-progress-table">
+            <div className="exercise-progress-row exercise-progress-head">
+              <span>Date</span>
+              <span>Best kg</span>
+              <span>Best set volume</span>
+              <span>Total volume</span>
+            </div>
+            {progress.map((point) => (
+              <div className="exercise-progress-row" key={point.date}>
+                <strong>{point.date}</strong>
+                <span>{formatNumber(point.bestKg)} kg</span>
+                <span>{formatNumber(point.bestSetVolume, 0)}</span>
+                <span>{formatNumber(point.totalVolume, 0)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </article>
   );
 }
 
