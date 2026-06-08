@@ -116,6 +116,19 @@ function formatSets(sets = []) {
   return sets.map((set) => `${set.kg || '-'}kg x ${set.reps || '-'}`).join(' / ');
 }
 
+const kgOptions = Array.from({ length: 81 }, (_, index) => {
+  const value = index * 2.5;
+  return Number.isInteger(value) ? value : Number(value.toFixed(1));
+});
+
+const repOptions = Array.from({ length: 30 }, (_, index) => index + 1);
+
+function parseSelectNumber(value) {
+  if (value === '') return '';
+  const number = Number(value);
+  return Number.isNaN(number) ? '' : number;
+}
+
 function App() {
   const [currentUser, setCurrentUser] = useState(null);
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -690,7 +703,7 @@ function WorkoutLog({ workouts, onAdd, onDelete }) {
   function updateSet(entryId, setIndex, field, value) {
     setEntries(entries.map((entry) => {
       if (entry.id !== entryId) return entry;
-      const nextSets = entry.sets.map((set, index) => index === setIndex ? { ...set, [field]: value } : set);
+      const nextSets = entry.sets.map((set, index) => index === setIndex ? { ...set, [field]: parseSelectNumber(value) } : set);
       return { ...entry, sets: nextSets };
     }));
   }
@@ -784,8 +797,18 @@ function WorkoutLog({ workouts, onAdd, onDelete }) {
                     {entry.sets.map((set, index) => (
                       <div className="sets-row" key={index}>
                         <span>{index + 1}</span>
-                        <input type="number" step="0.5" value={set.kg} onChange={(event) => updateSet(entry.id, index, 'kg', event.target.value)} placeholder="kg" />
-                        <input type="number" step="1" value={set.reps} onChange={(event) => updateSet(entry.id, index, 'reps', event.target.value)} placeholder="reps" />
+                        <select value={set.kg ?? ''} onChange={(event) => updateSet(entry.id, index, 'kg', event.target.value)} aria-label="Kg">
+                          <option value="">kg</option>
+                          {kgOptions.map((kg) => (
+                            <option key={kg} value={kg}>{kg}</option>
+                          ))}
+                        </select>
+                        <select value={set.reps ?? ''} onChange={(event) => updateSet(entry.id, index, 'reps', event.target.value)} aria-label={entry.exerciseId === 'treadmill' ? 'Minutes' : 'Reps'}>
+                          <option value="">{entry.exerciseId === 'treadmill' ? 'min' : 'reps'}</option>
+                          {repOptions.map((reps) => (
+                            <option key={reps} value={reps}>{reps}</option>
+                          ))}
+                        </select>
                         <button type="button" className="ghost danger mini" onClick={() => removeSet(entry.id, index)} aria-label="Remove set">×</button>
                       </div>
                     ))}
