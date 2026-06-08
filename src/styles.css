@@ -515,11 +515,51 @@ small {
   display: grid;
   gap: 10px;
   align-content: start;
+  border: 1px solid var(--line);
+  border-radius: 19px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.025);
 }
 
-.exercise-group h3 {
+.exercise-group summary {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  cursor: pointer;
+  list-style: none;
+  color: var(--ember);
+  font-weight: 900;
+}
+
+.exercise-group summary::-webkit-details-marker {
+  display: none;
+}
+
+.exercise-group summary::after {
+  content: "+";
+  color: var(--muted);
+  font-weight: 900;
+}
+
+.exercise-group[open] summary::after {
+  content: "−";
+}
+
+.exercise-group summary small {
+  font-weight: 700;
+}
+
+.exercise-group h3,
+.exercise-group summary {
   color: var(--ember);
   margin-bottom: 2px;
+}
+
+.exercise-group-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
 }
 
 .exercise-card {
@@ -607,5 +647,18 @@ small {
 
   .preview-box {
     display: grid;
+  }
+
+  .exercise-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .exercise-group {
+    padding: 11px;
+  }
+
+  .exercise-card {
+    min-height: auto;
   }
 }

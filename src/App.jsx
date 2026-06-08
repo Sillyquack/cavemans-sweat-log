@@ -878,21 +878,26 @@ function ExerciseLibrary({ workouts }) {
 
       <div className="exercise-grid">
         {Object.entries(groups).map(([group, items]) => (
-          <div className="exercise-group" key={group}>
-            <h3>{group}</h3>
-            {items.map((exercise) => {
-              const last = getLastExerciseEntry(workouts, exercise.id);
-              return (
-                <div className="exercise-card" key={exercise.id}>
-                  <strong>{exercise.name}</strong>
-                  <span>{exercise.norwegianName}</span>
-                  <p>{exercise.defaultSets} x {exercise.defaultReps} · {exercise.equipment}</p>
-                  {last && <p className="last-line">Last: {formatSets(last.entry.sets)}</p>}
-                  <small>{exercise.note}</small>
-                </div>
-              );
-            })}
-          </div>
+          <details className="exercise-group" key={group} open>
+            <summary>
+              <span>{group}</span>
+              <small>{items.length} exercises</small>
+            </summary>
+            <div className="exercise-group-list">
+              {items.map((exercise) => {
+                const last = getLastExerciseEntry(workouts, exercise.id);
+                return (
+                  <div className="exercise-card" key={exercise.id}>
+                    <strong>{exercise.name}</strong>
+                    <span>{exercise.norwegianName}</span>
+                    <p>{exercise.defaultSets} x {exercise.defaultReps} · {exercise.equipment}</p>
+                    {last && <p className="last-line">Last: {formatSets(last.entry.sets)}</p>}
+                    <small>{exercise.note}</small>
+                  </div>
+                );
+              })}
+            </div>
+          </details>
         ))}
       </div>
     </section>
