@@ -129,6 +129,28 @@ function parseSelectNumber(value) {
   return Number.isNaN(number) ? '' : number;
 }
 
+function toOptionalNumber(value) {
+  if (value === null || value === undefined || value === '') return null;
+  const number = Number(value);
+  return Number.isNaN(number) ? null : number;
+}
+
+function getBodyMetricLogs(bodyLogs, field) {
+  return sortByDateDesc(bodyLogs)
+    .filter((log) => toOptionalNumber(log[field]) !== null)
+    .map((log) => ({
+      date: log.date,
+      value: toOptionalNumber(log[field])
+    }));
+}
+
+function formatDifference(value, unit) {
+  if (value === null) return '-';
+  if (value === 0) return `0 ${unit}`;
+  const sign = value > 0 ? '+' : '';
+  return `${sign}${value.toFixed(1)} ${unit}`;
+}
+
 function App() {
   const [currentUser, setCurrentUser] = useState(null);
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -394,6 +416,13 @@ function Login({ onLogin }) {
 function Dashboard({ profile, bodyLogs, workouts }) {
   const latestBody = bodyLogs[0];
   const latestWorkout = workouts[0];
+  const weightLogs = useMemo(() => getBodyMetricLogs(bodyLogs, 'weightKg'), [bodyLogs]);
+  const waistLogs = useMemo(() => getBodyMetricLogs(bodyLogs, 'waistCm'), [bodyLogs]);
+  const latestWeight = weightLogs[0]?.value ?? null;
+  const previousWeight = weightLogs[1]?.value ?? null;
+  const latestWaist = waistLogs[0]?.value ?? null;
+  const previousWaist = waistLogs[1]?.value ?? null;
+  const totalWorkoutEntries = workouts.reduce((total, workout) => total + (workout.entries?.length || 0), 0);
   const thisWeekWorkouts = useMemo(() => {
     const now = new Date();
     const sevenDaysAgo = new Date(now);
@@ -401,7 +430,7 @@ function Dashboard({ profile, bodyLogs, workouts }) {
     return workouts.filter((workout) => new Date(workout.date) >= sevenDaysAgo).length;
   }, [workouts]);
 
-  const latestBMI = latestBody?.bmi ?? calculateBMI(latestBody?.weightKg, profile.heightCm);
+  const latestBMI = latestBody?.bmi ?? calculateBMI(latestWeight, profile.heightCm);
 
   return (
     <section className="grid two">
@@ -412,10 +441,32 @@ function Dashboard({ profile, bodyLogs, workouts }) {
       </article>
 
       <article className="card stats-card">
-        <Stat label="Latest weight" value={`${formatNumber(latestBody?.weightKg)} kg`} />
-        <Stat label="Latest waist" value={`${formatNumber(latestBody?.waistCm)} cm`} />
+        <Stat label="Latest weight" value={`${formatNumber(latestWeight)} kg`} />
+        <Stat label="Latest waist" value={`${formatNumber(latestWaist)} cm`} />
         <Stat label="Current BMI" value={latestBMI ? `${latestBMI} · ${getBMICategory(latestBMI)}` : '-'} />
         <Stat label="Workouts last 7 days" value={thisWeekWorkouts} />
+      </article>
+
+      <TrendCard title="Weight Trend" unit="kg" logs={weightLogs} />
+      <TrendCard title="Waist Trend" unit="cm" logs={waistLogs} />
+
+      <article className="card stats-card">
+        <h3>Workout Summary</h3>
+        <Stat label="Total workouts" value={workouts.length} />
+        <Stat label="Latest workout date" value={latestWorkout?.date || '-'} />
+        <Stat label="Exercise entries" value={totalWorkoutEntries} />
+      </article>
+
+      <article className="card">
+        <h3>Recent Progress</h3>
+        <div className="progress-list">
+          <ProgressRow label="Latest weight" value={latestWeight} unit="kg" />
+          <ProgressRow label="Previous weight" value={previousWeight} unit="kg" />
+          <ProgressRow label="Weight difference" value={latestWeight !== null && previousWeight !== null ? latestWeight - previousWeight : null} unit="kg" isDifference />
+          <ProgressRow label="Latest waist" value={latestWaist} unit="cm" />
+          <ProgressRow label="Previous waist" value={previousWaist} unit="cm" />
+          <ProgressRow label="Waist difference" value={latestWaist !== null && previousWaist !== null ? latestWaist - previousWaist : null} unit="cm" isDifference />
+        </div>
       </article>
 
       <article className="card">
@@ -423,8 +474,8 @@ function Dashboard({ profile, bodyLogs, workouts }) {
         {latestBody ? (
           <div className="simple-list">
             <p><strong>{latestBody.date}</strong></p>
-            <p>Weight: {latestBody.weightKg || '-'} kg</p>
-            <p>Waist: {latestBody.waistCm || '-'} cm</p>
+            <p>Weight: {formatNumber(latestBody.weightKg)} kg</p>
+            <p>Waist: {formatNumber(latestBody.waistCm)} cm</p>
             <p>BMI: {latestBody.bmi || '-'} {latestBody.bmiCategory ? `· ${latestBody.bmiCategory}` : ''}</p>
           </div>
         ) : (
@@ -453,6 +504,53 @@ function Stat({ label, value }) {
     <div className="stat">
       <span>{label}</span>
       <strong>{value}</strong>
+    </div>
+  );
+}
+
+function TrendCard({ title, unit, logs }) {
+  const points = logs.slice(0, 8).reverse();
+  const values = points.map((point) => point.value);
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const range = max - min || 1;
+  const pathPoints = points.map((point, index) => {
+    const x = points.length === 1 ? 50 : (index / (points.length - 1)) * 100;
+    const y = 90 - ((point.value - min) / range) * 70;
+    return `${x},${y}`;
+  }).join(' ');
+
+  return (
+    <article className="card">
+      <h3>{title}</h3>
+      {points.length >= 2 ? (
+        <div className="trend-card">
+          <svg viewBox="0 0 100 100" role="img" aria-label={`${title} chart`} preserveAspectRatio="none">
+            <polyline points={pathPoints} />
+            {points.map((point, index) => {
+              const x = points.length === 1 ? 50 : (index / (points.length - 1)) * 100;
+              const y = 90 - ((point.value - min) / range) * 70;
+              return <circle key={`${point.date}-${index}`} cx={x} cy={y} r="2.5" />;
+            })}
+          </svg>
+          <div className="trend-labels">
+            <span>{points[0].date}</span>
+            <strong>{formatNumber(points[points.length - 1].value)} {unit}</strong>
+            <span>{points[points.length - 1].date}</span>
+          </div>
+        </div>
+      ) : (
+        <p className="muted">Add more body logs to see your progress trend.</p>
+      )}
+    </article>
+  );
+}
+
+function ProgressRow({ label, value, unit, isDifference = false }) {
+  return (
+    <div className="progress-row">
+      <span>{label}</span>
+      <strong>{isDifference ? formatDifference(value, unit) : `${formatNumber(value)} ${unit}`}</strong>
     </div>
   );
 }

@@ -342,6 +342,63 @@ small {
   font-size: 1.25rem;
 }
 
+.trend-card {
+  display: grid;
+  gap: 12px;
+}
+
+.trend-card svg {
+  width: 100%;
+  height: 160px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.045), transparent),
+    rgba(255, 255, 255, 0.035);
+  overflow: visible;
+}
+
+.trend-card polyline {
+  fill: none;
+  stroke: var(--ember);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.trend-card circle {
+  fill: var(--accent);
+  stroke: var(--text);
+  stroke-width: 1;
+}
+
+.trend-labels,
+.progress-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+}
+
+.trend-labels span,
+.progress-row span {
+  color: var(--muted);
+}
+
+.progress-list {
+  display: grid;
+  gap: 10px;
+}
+
+.progress-row {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.progress-row:last-child {
+  border-bottom: 0;
+}
+
 .form-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -647,6 +704,15 @@ small {
 
   .preview-box {
     display: grid;
+  }
+
+  .trend-card svg {
+    height: 130px;
+  }
+
+  .trend-labels,
+  .progress-row {
+    align-items: start;
   }
 
   .exercise-grid {
