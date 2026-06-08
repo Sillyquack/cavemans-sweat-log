@@ -116,6 +116,21 @@ function formatSets(sets = []) {
   return sets.map((set) => `${set.kg || '-'}kg x ${set.reps || '-'}`).join(' / ');
 }
 
+function getValidSets(sets = []) {
+  return sets
+    .map((set) => ({
+      kg: toOptionalNumber(set.kg),
+      reps: toOptionalNumber(set.reps)
+    }))
+    .filter((set) => set.kg !== null && set.reps !== null);
+}
+
+function formatLastTime(entry) {
+  const validSets = getValidSets(entry?.sets);
+  if (!validSets.length) return null;
+  return validSets.map((set) => `${formatNumber(set.kg)} kg x ${formatNumber(set.reps, 0)}`).join(', ');
+}
+
 const kgOptions = Array.from({ length: 81 }, (_, index) => {
   const value = index * 2.5;
   return Number.isInteger(value) ? value : Number(value.toFixed(1));
@@ -165,6 +180,49 @@ function getBodyMetricLogs(bodyLogs, field) {
       date: log.date,
       value: toOptionalNumber(log[field])
     }));
+}
+
+function getPersonalRecords(workouts) {
+  const records = new Map();
+
+  for (const workout of workouts) {
+    for (const entry of workout.entries || []) {
+      const validSets = getValidSets(entry.sets);
+      if (!validSets.length) continue;
+
+      const current = records.get(entry.exerciseId) || {
+        exerciseId: entry.exerciseId,
+        exerciseName: entry.exerciseName,
+        bestKg: null,
+        bestRepsAtBestKg: null,
+        bestVolume: null,
+        latestDate: null
+      };
+
+      for (const set of validSets) {
+        const volume = set.kg * set.reps;
+        if (current.bestKg === null || set.kg > current.bestKg) {
+          current.bestKg = set.kg;
+          current.bestRepsAtBestKg = set.reps;
+        } else if (set.kg === current.bestKg && set.reps > current.bestRepsAtBestKg) {
+          current.bestRepsAtBestKg = set.reps;
+        }
+        if (current.bestVolume === null || volume > current.bestVolume) {
+          current.bestVolume = volume;
+        }
+      }
+
+      if (!current.latestDate || new Date(workout.date) > new Date(current.latestDate)) {
+        current.latestDate = workout.date;
+      }
+
+      records.set(entry.exerciseId, current);
+    }
+  }
+
+  return [...records.values()]
+    .sort((a, b) => (b.bestVolume || 0) - (a.bestVolume || 0) || (b.bestKg || 0) - (a.bestKg || 0))
+    .slice(0, 8);
 }
 
 function formatDifference(value, unit) {
@@ -446,6 +504,7 @@ function Dashboard({ profile, bodyLogs, workouts }) {
   const latestWaist = waistLogs[0]?.value ?? null;
   const previousWaist = waistLogs[1]?.value ?? null;
   const totalWorkoutEntries = workouts.reduce((total, workout) => total + (workout.entries?.length || 0), 0);
+  const personalRecords = useMemo(() => getPersonalRecords(workouts), [workouts]);
   const thisWeekWorkouts = useMemo(() => {
     const now = new Date();
     const sevenDaysAgo = new Date(now);
@@ -490,6 +549,32 @@ function Dashboard({ profile, bodyLogs, workouts }) {
           <ProgressRow label="Previous waist" value={previousWaist} unit="cm" />
           <ProgressRow label="Waist difference" value={latestWaist !== null && previousWaist !== null ? latestWaist - previousWaist : null} unit="cm" isDifference />
         </div>
+      </article>
+
+      <article className="card full">
+        <h3>Personal Records</h3>
+        {personalRecords.length ? (
+          <div className="record-list">
+            {personalRecords.map((record) => (
+              <div className="record-item" key={record.exerciseId}>
+                <div>
+                  <strong>{record.exerciseName}</strong>
+                  <p>Best lift: {formatNumber(record.bestKg)} kg x {formatNumber(record.bestRepsAtBestKg, 0)} reps</p>
+                </div>
+                <div>
+                  <span>Best set volume</span>
+                  <strong>{formatNumber(record.bestVolume, 0)}</strong>
+                </div>
+                <div>
+                  <span>Latest</span>
+                  <strong>{record.latestDate || '-'}</strong>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="muted">Log workouts to see your personal records.</p>
+        )}
       </article>
 
       <article className="card">
@@ -804,6 +889,7 @@ function WorkoutLog({ workouts, onAdd, onDelete }) {
 
   const selectedExercise = getExerciseById(selectedExerciseId);
   const lastSelected = getLastExerciseEntry(workouts, selectedExerciseId);
+  const selectedLastTime = formatLastTime(lastSelected?.entry);
   const exerciseGroups = useMemo(() => {
     return exercises.reduce((acc, exercise) => {
       acc[exercise.muscleGroup] = acc[exercise.muscleGroup] || [];
@@ -942,8 +1028,11 @@ function WorkoutLog({ workouts, onAdd, onDelete }) {
           <div className="last-used-box">
             <span>Selected</span>
             <strong>{selectedExercise?.name}</strong>
-            {lastSelected ? (
-              <p>Last used {lastSelected.workout.date}: {formatSets(lastSelected.entry.sets)}</p>
+            {lastSelected && selectedLastTime ? (
+              <>
+                <p>Last time: {selectedLastTime} on {lastSelected.workout.date}</p>
+                <p>Try to match or beat this next time.</p>
+              </>
             ) : (
               <p>No previous sets for this exercise yet.</p>
             )}
@@ -952,12 +1041,13 @@ function WorkoutLog({ workouts, onAdd, onDelete }) {
           <div className="exercise-entry-list">
             {entries.map((entry) => {
               const lastForEntry = getLastExerciseEntry(workouts, entry.exerciseId);
+              const lastForEntrySets = formatLastTime(lastForEntry?.entry);
               return (
                 <div className="exercise-entry" key={entry.id}>
                   <div className="entry-header">
                     <div>
                       <h3>{entry.exerciseName}</h3>
-                      {lastForEntry && <p>Last: {formatSets(lastForEntry.entry.sets)}</p>}
+                      {lastForEntry && lastForEntrySets && <p>Last time: {lastForEntrySets} on {lastForEntry.workout.date}</p>}
                     </div>
                     <button type="button" className="ghost danger" onClick={() => removeEntry(entry.id)}>Remove</button>
                   </div>
