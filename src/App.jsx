@@ -682,6 +682,13 @@ function WorkoutLog({ workouts, onAdd, onDelete }) {
 
   const selectedExercise = getExerciseById(selectedExerciseId);
   const lastSelected = getLastExerciseEntry(workouts, selectedExerciseId);
+  const exerciseGroups = useMemo(() => {
+    return exercises.reduce((acc, exercise) => {
+      acc[exercise.muscleGroup] = acc[exercise.muscleGroup] || [];
+      acc[exercise.muscleGroup].push(exercise);
+      return acc;
+    }, {});
+  }, []);
 
   function addExerciseEntry() {
     const exercise = getExerciseById(selectedExerciseId);
@@ -756,8 +763,12 @@ function WorkoutLog({ workouts, onAdd, onDelete }) {
             <label className="field">
               <span>Exercise</span>
               <select value={selectedExerciseId} onChange={(event) => setSelectedExerciseId(event.target.value)}>
-                {exercises.map((exercise) => (
-                  <option key={exercise.id} value={exercise.id}>{exercise.name} · {exercise.muscleGroup}</option>
+                {Object.entries(exerciseGroups).map(([group, items]) => (
+                  <optgroup key={group} label={group}>
+                    {items.map((exercise) => (
+                      <option key={exercise.id} value={exercise.id}>{exercise.name}</option>
+                    ))}
+                  </optgroup>
                 ))}
               </select>
             </label>
