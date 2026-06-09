@@ -8,6 +8,9 @@ const LEGACY_STORAGE_KEYS = {
   workouts: 'caveman-workouts'
 };
 
+const APP_VERSION = 'v0.4.0';
+const APP_VERSION_CONTEXT = 'Local data app · GitHub Pages version';
+
 const users = [
   {
     username: 'bobby',
@@ -927,6 +930,15 @@ function ProgressRow({ label, value, unit, isDifference = false }) {
   );
 }
 
+function AppVersionLabel() {
+  return (
+    <div className="app-version">
+      <strong>{APP_VERSION}</strong>
+      <span>{APP_VERSION_CONTEXT}</span>
+    </div>
+  );
+}
+
 function ManagerDashboard({ users, onExport }) {
   const regularUsers = users.filter((user) => user.username !== 'manager');
   const userSummaries = regularUsers.map((user) => {
@@ -988,6 +1000,7 @@ function ManagerDashboard({ users, onExport }) {
         <p className="eyebrow">Manager</p>
         <h2>Manager Dashboard</h2>
         <p>Overview and tools for managing the app.</p>
+        <AppVersionLabel />
       </article>
 
       <article className="card stats-card">
@@ -1317,6 +1330,7 @@ function WorkoutLog({ workouts, onAdd, onDelete }) {
                   </div>
 
                   <div className="sets-table">
+                    <p className="sets-help">Log total kg. For plate-loaded machines, add both sides. Example: 15 kg per side = 30 kg.</p>
                     <div className="sets-row sets-head">
                       <span>Set</span>
                       <span>Kg</span>
@@ -1464,6 +1478,7 @@ function Settings({ profile, onSave, onExport, onImport }) {
       <article className="card">
         <h2>Settings</h2>
         <p className="muted">Profile data is used for BMI and goal context.</p>
+        <AppVersionLabel />
 
         <form onSubmit={handleSubmit} className="form-grid">
           <Input label="Name" value={form.name} onChange={(value) => setForm({ ...form, name: value })} />
@@ -1489,10 +1504,11 @@ function Settings({ profile, onSave, onExport, onImport }) {
       <article className="card full data-card">
         <h2>Backup</h2>
         <p className="muted">Export before switching devices or browsers. Import replaces the data on this device.</p>
+        <p className="muted">This backup belongs to the currently logged-in user on this device.</p>
         <div className="backup-actions">
-          <button className="secondary" type="button" onClick={onExport}>Export Data</button>
+          <button className="secondary" type="button" onClick={onExport}>Export My Data</button>
           <label className="secondary import-button">
-            Import Data
+            Import My Data
             <input type="file" accept="application/json,.json" onChange={handleImport} />
           </label>
         </div>
