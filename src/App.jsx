@@ -10,6 +10,7 @@ const LEGACY_STORAGE_KEYS = {
 
 const APP_VERSION = 'v0.4.0';
 const APP_VERSION_CONTEXT = 'Local data app · GitHub Pages version';
+const DEFAULT_WEEKLY_WORKOUT_GOAL = 3;
 
 const users = [
   {
@@ -40,7 +41,8 @@ const defaultProfile = {
   birthYear: '',
   goal: '',
   targetWeightKg: '',
-  targetWaistCm: ''
+  targetWaistCm: '',
+  weeklyGoal: DEFAULT_WEEKLY_WORKOUT_GOAL
 };
 
 function getEmptyProfile() {
@@ -141,8 +143,6 @@ const kgOptions = Array.from({ length: 81 }, (_, index) => {
 
 const repOptions = Array.from({ length: 30 }, (_, index) => index + 1);
 
-const DEFAULT_WEEKLY_WORKOUT_GOAL = 3;
-
 const workoutTemplates = [
   {
     id: 'upper-body',
@@ -176,6 +176,12 @@ function toOptionalNumber(value) {
   if (value === null || value === undefined || value === '') return null;
   const number = Number(value);
   return Number.isNaN(number) ? null : number;
+}
+
+function getWeeklyGoalValue(value) {
+  const number = toOptionalNumber(value);
+  if (number === null || number < 1) return DEFAULT_WEEKLY_WORKOUT_GOAL;
+  return Math.floor(number);
 }
 
 function getBodyMetricLogs(bodyLogs, field) {
@@ -317,6 +323,7 @@ function formatISODate(date) {
 }
 
 function getWeeklyWorkoutStats(workouts, weeklyGoal = DEFAULT_WEEKLY_WORKOUT_GOAL) {
+  const goal = getWeeklyGoalValue(weeklyGoal);
   const today = startOfDay(new Date());
   const weekStart = getWeekStart(today);
   const nextWeekStart = addDays(weekStart, 7);
@@ -342,17 +349,17 @@ function getWeeklyWorkoutStats(workouts, weeklyGoal = DEFAULT_WEEKLY_WORKOUT_GOA
     }
   }
 
-  const remainingWorkouts = Math.max(weeklyGoal - workoutsThisWeek, 0);
-  let streakStart = workoutsThisWeek >= weeklyGoal ? weekStart : addDays(weekStart, -7);
+  const remainingWorkouts = Math.max(goal - workoutsThisWeek, 0);
+  let streakStart = workoutsThisWeek >= goal ? weekStart : addDays(weekStart, -7);
   let workoutStreak = 0;
 
-  while ((weeklyCounts.get(formatISODate(streakStart)) || 0) >= weeklyGoal) {
+  while ((weeklyCounts.get(formatISODate(streakStart)) || 0) >= goal) {
     workoutStreak += 1;
     streakStart = addDays(streakStart, -7);
   }
 
   let message = 'Start this week with one solid session.';
-  if (workoutsThisWeek >= weeklyGoal) {
+  if (workoutsThisWeek >= goal) {
     message = 'Goal reached this week. Strong work.';
   } else if (remainingWorkouts === 1) {
     message = 'One more workout to hit your weekly goal.';
@@ -360,12 +367,12 @@ function getWeeklyWorkoutStats(workouts, weeklyGoal = DEFAULT_WEEKLY_WORKOUT_GOA
 
   return {
     workoutsThisWeek,
-    weeklyGoal,
+    weeklyGoal: goal,
     remainingWorkouts,
     latestWorkoutDate: latestDate ? formatISODate(latestDate) : null,
     daysSinceLastWorkout: latestDate ? Math.max(0, Math.floor((today - latestDate) / 86400000)) : null,
     workoutStreak,
-    progressPercent: Math.min((workoutsThisWeek / weeklyGoal) * 100, 100),
+    progressPercent: Math.min((workoutsThisWeek / goal) * 100, 100),
     message
   };
 }
@@ -659,7 +666,8 @@ function Dashboard({ profile, bodyLogs, workouts }) {
     () => getExerciseProgress(workouts, activeProgressExerciseId),
     [workouts, activeProgressExerciseId]
   );
-  const weeklyStats = useMemo(() => getWeeklyWorkoutStats(workouts), [workouts]);
+  const weeklyGoal = getWeeklyGoalValue(profile.weeklyGoal);
+  const weeklyStats = useMemo(() => getWeeklyWorkoutStats(workouts, weeklyGoal), [workouts, weeklyGoal]);
   const thisWeekWorkouts = useMemo(() => {
     const now = new Date();
     const sevenDaysAgo = new Date(now);
@@ -1450,10 +1458,11 @@ function ExerciseLibrary({ workouts }) {
 function Settings({ profile, onSave, onExport, onImport }) {
   const [form, setForm] = useState(profile);
   const age = form.birthYear ? new Date().getFullYear() - Number(form.birthYear) : null;
+  const weeklyGoal = getWeeklyGoalValue(form.weeklyGoal);
 
   function handleSubmit(event) {
     event.preventDefault();
-    onSave(form);
+    onSave({ ...form, weeklyGoal });
   }
 
   function handleImport(event) {
@@ -1486,6 +1495,7 @@ function Settings({ profile, onSave, onExport, onImport }) {
           <Input label="Birth year" type="number" value={form.birthYear} onChange={(value) => setForm({ ...form, birthYear: value })} />
           <Input label="Target weight kg" type="number" step="0.1" value={form.targetWeightKg} onChange={(value) => setForm({ ...form, targetWeightKg: value })} />
           <Input label="Target waist cm" type="number" step="0.1" value={form.targetWaistCm} onChange={(value) => setForm({ ...form, targetWaistCm: value })} />
+          <Input label="Weekly workout goal" type="number" value={form.weeklyGoal ?? DEFAULT_WEEKLY_WORKOUT_GOAL} onChange={(value) => setForm({ ...form, weeklyGoal: value })} />
           <label className="field full">
             <span>Goal</span>
             <input value={form.goal} onChange={(event) => setForm({ ...form, goal: event.target.value })} />
@@ -1499,6 +1509,7 @@ function Settings({ profile, onSave, onExport, onImport }) {
         <Stat label="Age" value={age || '-'} />
         <Stat label="Goal" value={form.goal || '-'} />
         <Stat label="Target waist" value={form.targetWaistCm ? `${form.targetWaistCm} cm` : '-'} />
+        <Stat label="Weekly workout goal" value={weeklyGoal} />
       </article>
 
       <article className="card full data-card">
