@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { exercises } from './data/exercises.js';
 import { calculateBMI, formatNumber, getBMICategory, getTodayISO, sortByDateDesc } from './utils/calculations.js';
 
@@ -11,6 +11,25 @@ const LEGACY_STORAGE_KEYS = {
 const APP_VERSION = 'v0.4.0';
 const APP_VERSION_CONTEXT = 'Local data app · GitHub Pages version';
 const DEFAULT_WEEKLY_WORKOUT_GOAL = 3;
+const DEFAULT_THEME_ID = 'apple-glass';
+
+const THEME_OPTIONS = [
+  {
+    id: 'apple-glass',
+    name: 'Apple Glass Premium',
+    className: 'theme-apple-glass'
+  },
+  {
+    id: 'futuristic-neon',
+    name: 'Futuristic Neon Performance',
+    className: 'theme-futuristic-neon'
+  },
+  {
+    id: 'obsidian-gold',
+    name: 'Obsidian Gold Caveman',
+    className: 'theme-obsidian-gold'
+  }
+];
 
 const users = [
   {
@@ -42,7 +61,8 @@ const defaultProfile = {
   goal: '',
   targetWeightKg: '',
   targetWaistCm: '',
-  weeklyGoal: DEFAULT_WEEKLY_WORKOUT_GOAL
+  weeklyGoal: DEFAULT_WEEKLY_WORKOUT_GOAL,
+  theme: DEFAULT_THEME_ID
 };
 
 function getEmptyProfile() {
@@ -182,6 +202,10 @@ function getWeeklyGoalValue(value) {
   const number = toOptionalNumber(value);
   if (number === null || number < 1) return DEFAULT_WEEKLY_WORKOUT_GOAL;
   return Math.floor(number);
+}
+
+function getThemeOption(themeId) {
+  return THEME_OPTIONS.find((theme) => theme.id === themeId) || THEME_OPTIONS[0];
 }
 
 function getBodyMetricLogs(bodyLogs, field) {
@@ -392,6 +416,17 @@ function App() {
   const [workouts, setWorkouts] = useState([]);
   const isManager = currentUser?.username === 'manager';
   const currentStorageKeys = currentUser && !isManager ? getUserStorageKeys(currentUser.username) : null;
+  const activeTheme = getThemeOption(!currentUser || isManager ? DEFAULT_THEME_ID : profile.theme);
+
+  useEffect(() => {
+    const themeClasses = THEME_OPTIONS.map((theme) => theme.className);
+    document.body.classList.remove(...themeClasses);
+    document.body.classList.add(activeTheme.className);
+
+    return () => {
+      document.body.classList.remove(...themeClasses);
+    };
+  }, [activeTheme.className]);
 
   function handleLogin(username, password) {
     const normalizedUsername = username.trim().toLowerCase();
@@ -1459,10 +1494,17 @@ function Settings({ profile, onSave, onExport, onImport }) {
   const [form, setForm] = useState(profile);
   const age = form.birthYear ? new Date().getFullYear() - Number(form.birthYear) : null;
   const weeklyGoal = getWeeklyGoalValue(form.weeklyGoal);
+  const selectedTheme = getThemeOption(form.theme).id;
 
   function handleSubmit(event) {
     event.preventDefault();
-    onSave({ ...form, weeklyGoal });
+    onSave({ ...form, weeklyGoal, theme: selectedTheme });
+  }
+
+  function handleThemeChange(themeId) {
+    const nextForm = { ...form, theme: themeId };
+    setForm(nextForm);
+    onSave({ ...nextForm, weeklyGoal: getWeeklyGoalValue(nextForm.weeklyGoal), theme: themeId });
   }
 
   function handleImport(event) {
@@ -1496,6 +1538,14 @@ function Settings({ profile, onSave, onExport, onImport }) {
           <Input label="Target weight kg" type="number" step="0.1" value={form.targetWeightKg} onChange={(value) => setForm({ ...form, targetWeightKg: value })} />
           <Input label="Target waist cm" type="number" step="0.1" value={form.targetWaistCm} onChange={(value) => setForm({ ...form, targetWaistCm: value })} />
           <Input label="Weekly workout goal" type="number" value={form.weeklyGoal ?? DEFAULT_WEEKLY_WORKOUT_GOAL} onChange={(value) => setForm({ ...form, weeklyGoal: value })} />
+          <label className="field">
+            <span>Theme</span>
+            <select value={selectedTheme} onChange={(event) => handleThemeChange(event.target.value)}>
+              {THEME_OPTIONS.map((theme) => (
+                <option key={theme.id} value={theme.id}>{theme.name}</option>
+              ))}
+            </select>
+          </label>
           <label className="field full">
             <span>Goal</span>
             <input value={form.goal} onChange={(event) => setForm({ ...form, goal: event.target.value })} />
@@ -1510,6 +1560,7 @@ function Settings({ profile, onSave, onExport, onImport }) {
         <Stat label="Goal" value={form.goal || '-'} />
         <Stat label="Target waist" value={form.targetWaistCm ? `${form.targetWaistCm} cm` : '-'} />
         <Stat label="Weekly workout goal" value={weeklyGoal} />
+        <Stat label="Theme" value={getThemeOption(form.theme).name} />
       </article>
 
       <article className="card full data-card">
