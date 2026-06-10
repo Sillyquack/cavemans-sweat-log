@@ -694,13 +694,126 @@ small {
   font-size: 0.85rem;
 }
 
-.compact-select select {
+.app-picker {
+  position: relative;
   width: 100%;
-  border: 1px solid var(--line);
+}
+
+.app-picker-trigger {
+  min-height: 46px;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: center;
+  text-align: left;
+}
+
+.app-picker-trigger:hover {
+  border-color: var(--line-strong);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.075), rgba(255, 255, 255, 0.04));
+}
+
+.app-picker-trigger[aria-expanded="true"] {
+  border-color: var(--accent-line);
+  box-shadow:
+    0 0 0 3px rgba(var(--accent-rgb), 0.1),
+    0 16px 34px rgba(var(--accent-rgb), 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.app-picker-chevron {
+  color: var(--ember);
+  font-size: 0.78rem;
+  font-weight: 900;
+  transition: transform 0.16s ease;
+}
+
+.app-picker-trigger[aria-expanded="true"] .app-picker-chevron {
+  transform: rotate(180deg);
+}
+
+.app-picker-popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  z-index: 60;
+  max-height: min(320px, 52vh);
+  overflow: auto;
+  padding: 8px;
+  border: 1px solid var(--accent-line);
   border-radius: var(--radius);
-  padding: 12px 13px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent 62%),
+    radial-gradient(circle at top right, var(--surface-glow), transparent 16rem),
+    var(--panel-2);
+  box-shadow:
+    0 24px 60px rgba(0, 0, 0, 0.58),
+    0 0 30px rgba(var(--accent-rgb), 0.14),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.app-picker-popover::-webkit-scrollbar {
+  width: 8px;
+}
+
+.app-picker-popover::-webkit-scrollbar-thumb {
+  background: rgba(var(--accent-rgb), 0.26);
+  border-radius: var(--radius);
+}
+
+.app-picker-group + .app-picker-group {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+}
+
+.app-picker-group-label {
+  padding: 8px 10px 6px;
+  color: var(--ember);
+  font-size: 0.76rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.app-picker-option {
+  width: 100%;
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  padding: 10px 11px;
   color: var(--text);
-  background: rgba(255, 255, 255, 0.065);
+  background: transparent;
+  text-align: left;
+  font-weight: 750;
+}
+
+.app-picker-option:hover,
+.app-picker-option:focus-visible {
+  border-color: var(--line-strong);
+  background: rgba(var(--accent-rgb), 0.09);
+  outline: none;
+}
+
+.app-picker-option.selected {
+  border-color: var(--accent-line);
+  color: var(--button-text);
+  background: var(--button-active-background);
+  box-shadow:
+    0 10px 24px rgba(var(--accent-rgb), 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.22);
+}
+
+.app-picker-option:disabled {
+  color: var(--muted);
+  cursor: not-allowed;
+  opacity: 0.62;
 }
 
 .exercise-progress {
@@ -747,10 +860,9 @@ small {
 }
 
 .field input,
-.field select,
 .field textarea,
 .sets-row input,
-.sets-row select {
+.app-picker-trigger {
   width: 100%;
   border: 1px solid var(--line);
   border-radius: var(--radius);
@@ -762,26 +874,15 @@ small {
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035);
 }
 
-.field select {
-  color: var(--text);
-}
-
-.field select option,
-.sets-row select option {
-  color: #111;
-  background: #fff;
-}
-
 .field textarea {
   min-height: 96px;
   resize: vertical;
 }
 
 .field input:focus,
-.field select:focus,
 .field textarea:focus,
 .sets-row input:focus,
-.sets-row select:focus {
+.app-picker-trigger:focus-visible {
   border-color: var(--accent-line);
   box-shadow:
     0 0 0 3px rgba(var(--accent-rgb), 0.12),
@@ -1133,6 +1234,17 @@ small {
 
   .compact-select {
     min-width: 0;
+  }
+
+  .app-picker-popover {
+    position: fixed;
+    top: auto;
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+    max-height: min(68vh, 460px);
+    padding: 10px;
+    border-radius: var(--radius-soft);
   }
 
   .weekly-goal-grid {

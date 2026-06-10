@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { exercises } from './data/exercises.js';
 import { calculateBMI, formatNumber, getBMICategory, getTodayISO, sortByDateDesc } from './utils/calculations.js';
 
@@ -843,6 +843,10 @@ function WeeklyGoalCard({ stats }) {
 }
 
 function ExerciseProgressCard({ options, selectedExerciseId, onSelectExercise, progress }) {
+  const pickerOptions = options.map((option) => ({
+    value: option.exerciseId,
+    label: option.exerciseName
+  }));
   const chartPoints = progress.slice(-8);
   const values = chartPoints.map((point) => point.totalVolume);
   const min = Math.min(...values);
@@ -863,13 +867,13 @@ function ExerciseProgressCard({ options, selectedExerciseId, onSelectExercise, p
         </div>
         <label className="compact-select">
           <span>Exercise</span>
-          <select value={selectedExerciseId} onChange={(event) => onSelectExercise(event.target.value)}>
-            {options.map((option) => (
-              <option key={option.exerciseId} value={option.exerciseId}>
-                {option.exerciseName}
-              </option>
-            ))}
-          </select>
+          <AppSelect
+            value={selectedExerciseId}
+            onChange={onSelectExercise}
+            options={pickerOptions}
+            placeholder="Choose exercise"
+            ariaLabel="Exercise progress exercise"
+          />
         </label>
       </div>
 
@@ -1217,6 +1221,26 @@ function WorkoutLog({ workouts, onAdd, onDelete }) {
       return acc;
     }, {});
   }, []);
+  const templateOptions = useMemo(() => [
+    { value: '', label: 'Choose template' },
+    ...workoutTemplates.map((template) => ({ value: template.id, label: template.name }))
+  ], []);
+  const exerciseOptionGroups = useMemo(() => Object.entries(exerciseGroups).map(([group, items]) => ({
+    label: group,
+    options: items.map((exercise) => ({ value: exercise.id, label: exercise.name }))
+  })), [exerciseGroups]);
+  const kgPickerOptions = useMemo(() => [
+    { value: '', label: 'kg' },
+    ...kgOptions.map((kg) => ({ value: kg, label: String(kg) }))
+  ], []);
+  const repPickerOptions = useMemo(() => [
+    { value: '', label: 'reps' },
+    ...repOptions.map((reps) => ({ value: reps, label: String(reps) }))
+  ], []);
+  const minutePickerOptions = useMemo(() => [
+    { value: '', label: 'min' },
+    ...repOptions.map((minutes) => ({ value: minutes, label: String(minutes) }))
+  ], []);
 
   function createExerciseEntry(exercise, usePreviousSets = true) {
     const previous = usePreviousSets ? getLastExerciseEntry(workouts, exercise.id) : null;
@@ -1318,12 +1342,13 @@ function WorkoutLog({ workouts, onAdd, onDelete }) {
             <div className="template-actions">
               <label className="field">
                 <span>Template</span>
-                <select value={selectedTemplateId} onChange={(event) => setSelectedTemplateId(event.target.value)}>
-                  <option value="">Choose template</option>
-                  {workoutTemplates.map((template) => (
-                    <option key={template.id} value={template.id}>{template.name}</option>
-                  ))}
-                </select>
+                <AppSelect
+                  value={selectedTemplateId}
+                  onChange={setSelectedTemplateId}
+                  options={templateOptions}
+                  placeholder="Choose template"
+                  ariaLabel="Workout template"
+                />
               </label>
               <button type="button" className="secondary" onClick={applyTemplate} disabled={!selectedTemplateId}>Apply Template</button>
             </div>
@@ -1332,15 +1357,13 @@ function WorkoutLog({ workouts, onAdd, onDelete }) {
           <div className="add-exercise-row">
             <label className="field">
               <span>Exercise</span>
-              <select value={selectedExerciseId} onChange={(event) => setSelectedExerciseId(event.target.value)}>
-                {Object.entries(exerciseGroups).map(([group, items]) => (
-                  <optgroup key={group} label={group}>
-                    {items.map((exercise) => (
-                      <option key={exercise.id} value={exercise.id}>{exercise.name}</option>
-                    ))}
-                  </optgroup>
-                ))}
-              </select>
+              <AppSelect
+                value={selectedExerciseId}
+                onChange={setSelectedExerciseId}
+                groups={exerciseOptionGroups}
+                placeholder="Choose exercise"
+                ariaLabel="Workout exercise"
+              />
             </label>
             <button type="button" className="secondary" onClick={addExerciseEntry}>Add Exercise</button>
           </div>
@@ -1383,18 +1406,20 @@ function WorkoutLog({ workouts, onAdd, onDelete }) {
                     {entry.sets.map((set, index) => (
                       <div className="sets-row" key={index}>
                         <span>{index + 1}</span>
-                        <select value={set.kg ?? ''} onChange={(event) => updateSet(entry.id, index, 'kg', event.target.value)} aria-label="Kg">
-                          <option value="">kg</option>
-                          {kgOptions.map((kg) => (
-                            <option key={kg} value={kg}>{kg}</option>
-                          ))}
-                        </select>
-                        <select value={set.reps ?? ''} onChange={(event) => updateSet(entry.id, index, 'reps', event.target.value)} aria-label={entry.exerciseId === 'treadmill' ? 'Minutes' : 'Reps'}>
-                          <option value="">{entry.exerciseId === 'treadmill' ? 'min' : 'reps'}</option>
-                          {repOptions.map((reps) => (
-                            <option key={reps} value={reps}>{reps}</option>
-                          ))}
-                        </select>
+                        <AppSelect
+                          value={set.kg ?? ''}
+                          onChange={(value) => updateSet(entry.id, index, 'kg', value)}
+                          options={kgPickerOptions}
+                          placeholder="kg"
+                          ariaLabel="Kg"
+                        />
+                        <AppSelect
+                          value={set.reps ?? ''}
+                          onChange={(value) => updateSet(entry.id, index, 'reps', value)}
+                          options={entry.exerciseId === 'treadmill' ? minutePickerOptions : repPickerOptions}
+                          placeholder={entry.exerciseId === 'treadmill' ? 'min' : 'reps'}
+                          ariaLabel={entry.exerciseId === 'treadmill' ? 'Minutes' : 'Reps'}
+                        />
                         <button type="button" className="ghost danger mini" onClick={() => removeSet(entry.id, index)} aria-label="Remove set">×</button>
                       </div>
                     ))}
@@ -1540,11 +1565,13 @@ function Settings({ profile, onSave, onExport, onImport }) {
           <Input label="Weekly workout goal" type="number" value={form.weeklyGoal ?? DEFAULT_WEEKLY_WORKOUT_GOAL} onChange={(value) => setForm({ ...form, weeklyGoal: value })} />
           <label className="field">
             <span>Theme</span>
-            <select value={selectedTheme} onChange={(event) => handleThemeChange(event.target.value)}>
-              {THEME_OPTIONS.map((theme) => (
-                <option key={theme.id} value={theme.id}>{theme.name}</option>
-              ))}
-            </select>
+            <AppSelect
+              value={selectedTheme}
+              onChange={handleThemeChange}
+              options={THEME_OPTIONS.map((theme) => ({ value: theme.id, label: theme.name }))}
+              placeholder="Choose theme"
+              ariaLabel="App theme"
+            />
           </label>
           <label className="field full">
             <span>Goal</span>
@@ -1585,6 +1612,91 @@ function Input({ label, value, onChange, type = 'text', step }) {
       <span>{label}</span>
       <input type={type} step={step} value={value} onChange={(event) => onChange(event.target.value)} />
     </label>
+  );
+}
+
+function AppSelect({ value, onChange, options = [], groups = [], placeholder = 'Select', ariaLabel, className = '' }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const pickerRef = useRef(null);
+  const selectId = useMemo(() => `picker-${crypto.randomUUID()}`, []);
+  const optionGroups = groups.length ? groups : [{ label: '', options }];
+  const flatOptions = optionGroups.flatMap((group) => group.options);
+  const selectedOption = flatOptions.find((option) => String(option.value) === String(value ?? ''));
+  const displayLabel = selectedOption?.label || placeholder;
+
+  useEffect(() => {
+    if (!isOpen) return undefined;
+
+    function handlePointerDown(event) {
+      if (!pickerRef.current?.contains(event.target)) {
+        setIsOpen(false);
+      }
+    }
+
+    function handleKeyDown(event) {
+      if (event.key === 'Escape') {
+        setIsOpen(false);
+      }
+    }
+
+    document.addEventListener('mousedown', handlePointerDown);
+    document.addEventListener('touchstart', handlePointerDown);
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown);
+      document.removeEventListener('touchstart', handlePointerDown);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen]);
+
+  function handleOptionSelect(option) {
+    if (option.disabled) return;
+    onChange(option.value);
+    setIsOpen(false);
+  }
+
+  return (
+    <div className={`app-picker ${className}`.trim()} ref={pickerRef}>
+      <button
+        type="button"
+        className="app-picker-trigger"
+        aria-label={ariaLabel || placeholder}
+        aria-haspopup="listbox"
+        aria-expanded={isOpen}
+        aria-controls={selectId}
+        onClick={() => setIsOpen((current) => !current)}
+      >
+        <span>{displayLabel}</span>
+        <span className="app-picker-chevron" aria-hidden="true">v</span>
+      </button>
+
+      {isOpen && (
+        <div className="app-picker-popover" role="listbox" id={selectId} aria-label={ariaLabel || placeholder}>
+          {optionGroups.map((group) => (
+            <div className="app-picker-group" key={group.label || 'options'}>
+              {group.label && <div className="app-picker-group-label">{group.label}</div>}
+              {group.options.map((option) => {
+                const isSelected = String(option.value) === String(value ?? '');
+                return (
+                  <button
+                    type="button"
+                    role="option"
+                    aria-selected={isSelected}
+                    className={isSelected ? 'app-picker-option selected' : 'app-picker-option'}
+                    key={`${group.label}-${option.value}`}
+                    disabled={option.disabled}
+                    onClick={() => handleOptionSelect(option)}
+                  >
+                    {option.label}
+                  </button>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
