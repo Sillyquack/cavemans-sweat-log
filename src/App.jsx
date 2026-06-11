@@ -1489,7 +1489,7 @@ function ExerciseLibrary({ workouts }) {
 
       <div className="exercise-grid">
         {Object.entries(groups).map(([group, items]) => (
-          <details className="exercise-group" key={group} open>
+          <details className="exercise-group" key={group}>
             <summary>
               <span>{group}</span>
               <small>{items.length} exercises</small>
@@ -1499,8 +1499,10 @@ function ExerciseLibrary({ workouts }) {
                 const last = getLastExerciseEntry(workouts, exercise.id);
                 return (
                   <div className="exercise-card" key={exercise.id}>
-                    <strong>{exercise.name}</strong>
-                    <span>{exercise.norwegianName}</span>
+                    <div className="exercise-card-header">
+                      <strong>{exercise.name}</strong>
+                      <span>{exercise.norwegianName}</span>
+                    </div>
                     <p>{exercise.defaultSets} x {exercise.defaultReps} · {exercise.equipment}</p>
                     {last && <p className="last-line">Last: {formatSets(last.entry.sets)}</p>}
                     <small>{exercise.note}</small>
