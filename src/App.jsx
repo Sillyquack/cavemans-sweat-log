@@ -1627,6 +1627,7 @@ function AppSelect({ value, onChange, options = [], groups = [], placeholder = '
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const pickerRef = useRef(null);
+  const pickerInstanceId = useRef(crypto.randomUUID()).current;
   const searchInputRef = useRef(null);
   const selectedOptionRef = useRef(null);
   const selectId = useMemo(() => `picker-${crypto.randomUUID()}`, []);
@@ -1644,6 +1645,20 @@ function AppSelect({ value, onChange, options = [], groups = [], placeholder = '
     : optionGroups;
   const selectedOption = flatOptions.find((option) => String(option.value) === String(value ?? ''));
   const displayLabel = selectedOption?.label || placeholder;
+
+  useEffect(() => {
+    function handleOtherPickerOpen(event) {
+      if (event.detail !== pickerInstanceId) {
+        setIsOpen(false);
+      }
+    }
+
+    window.addEventListener('app-picker-open', handleOtherPickerOpen);
+
+    return () => {
+      window.removeEventListener('app-picker-open', handleOtherPickerOpen);
+    };
+  }, [pickerInstanceId]);
 
   useEffect(() => {
     if (!isOpen) return undefined;
@@ -1694,6 +1709,20 @@ function AppSelect({ value, onChange, options = [], groups = [], placeholder = '
     setIsOpen(false);
   }
 
+  function openPicker() {
+    window.dispatchEvent(new CustomEvent('app-picker-open', { detail: pickerInstanceId }));
+    setIsOpen(true);
+  }
+
+  function togglePicker() {
+    if (isOpen) {
+      setIsOpen(false);
+      return;
+    }
+
+    openPicker();
+  }
+
   return (
     <div className={`app-picker ${className}`.trim()} ref={pickerRef}>
       <button
@@ -1703,11 +1732,11 @@ function AppSelect({ value, onChange, options = [], groups = [], placeholder = '
         aria-haspopup="listbox"
         aria-expanded={isOpen}
         aria-controls={selectId}
-        onClick={() => setIsOpen((current) => !current)}
+        onClick={togglePicker}
         onKeyDown={(event) => {
           if (event.key === 'ArrowDown') {
             event.preventDefault();
-            setIsOpen(true);
+            openPicker();
           }
         }}
       >
