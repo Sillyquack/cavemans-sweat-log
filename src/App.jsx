@@ -1474,6 +1474,7 @@ function WorkoutLog({ workouts, onAdd, onDelete }) {
 }
 
 function ExerciseLibrary({ workouts }) {
+  const [openExerciseCategory, setOpenExerciseCategory] = useState(null);
   const groups = useMemo(() => {
     return exercises.reduce((acc, exercise) => {
       acc[exercise.muscleGroup] = acc[exercise.muscleGroup] || [];
@@ -1489,8 +1490,13 @@ function ExerciseLibrary({ workouts }) {
 
       <div className="exercise-grid">
         {Object.entries(groups).map(([group, items]) => (
-          <details className="exercise-group" key={group}>
-            <summary>
+          <details className="exercise-group" key={group} open={openExerciseCategory === group}>
+            <summary
+              onClick={(event) => {
+                event.preventDefault();
+                setOpenExerciseCategory(openExerciseCategory === group ? null : group);
+              }}
+            >
               <span>{group}</span>
               <small>{items.length} exercises</small>
             </summary>
