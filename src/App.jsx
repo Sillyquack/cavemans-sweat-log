@@ -868,6 +868,7 @@ function ExerciseProgressCard({ options, selectedExerciseId, onSelectExercise, p
         <label className="compact-select">
           <span>Exercise</span>
           <AppSelect
+            pickerId="dashboard-progress-exercise"
             value={selectedExerciseId}
             onChange={onSelectExercise}
             options={pickerOptions}
@@ -1343,6 +1344,7 @@ function WorkoutLog({ workouts, onAdd, onDelete }) {
               <label className="field">
                 <span>Template</span>
                 <AppSelect
+                  pickerId="workout-template"
                   value={selectedTemplateId}
                   onChange={setSelectedTemplateId}
                   options={templateOptions}
@@ -1358,6 +1360,7 @@ function WorkoutLog({ workouts, onAdd, onDelete }) {
             <label className="field">
               <span>Exercise</span>
               <AppSelect
+                pickerId="workout-exercise"
                 value={selectedExerciseId}
                 onChange={setSelectedExerciseId}
                 groups={exerciseOptionGroups}
@@ -1407,6 +1410,7 @@ function WorkoutLog({ workouts, onAdd, onDelete }) {
                       <div className="sets-row" key={index}>
                         <span>{index + 1}</span>
                         <AppSelect
+                          pickerId={`workout-set-${entry.id}-${index}-kg`}
                           value={set.kg ?? ''}
                           onChange={(value) => updateSet(entry.id, index, 'kg', value)}
                           options={kgPickerOptions}
@@ -1414,6 +1418,7 @@ function WorkoutLog({ workouts, onAdd, onDelete }) {
                           ariaLabel="Kg"
                         />
                         <AppSelect
+                          pickerId={`workout-set-${entry.id}-${index}-${entry.exerciseId === 'treadmill' ? 'minutes' : 'reps'}`}
                           value={set.reps ?? ''}
                           onChange={(value) => updateSet(entry.id, index, 'reps', value)}
                           options={entry.exerciseId === 'treadmill' ? minutePickerOptions : repPickerOptions}
@@ -1574,6 +1579,7 @@ function Settings({ profile, onSave, onExport, onImport }) {
           <label className="field">
             <span>Theme</span>
             <AppSelect
+              pickerId="settings-theme"
               value={selectedTheme}
               onChange={handleThemeChange}
               options={THEME_OPTIONS.map((theme) => ({ value: theme.id, label: theme.name }))}
@@ -1645,14 +1651,15 @@ function useActivePickerId() {
   return [currentPickerId, setActivePickerId];
 }
 
-function AppSelect({ value, onChange, options = [], groups = [], placeholder = 'Select', ariaLabel, className = '' }) {
+function AppSelect({ pickerId, value, onChange, options = [], groups = [], placeholder = 'Select', ariaLabel, className = '' }) {
   const [searchTerm, setSearchTerm] = useState('');
   const pickerRef = useRef(null);
-  const pickerInstanceId = useRef(crypto.randomUUID()).current;
+  const generatedPickerId = useRef(`picker-${crypto.randomUUID()}`).current;
+  const pickerInstanceId = pickerId || generatedPickerId;
   const [activePicker, setActivePicker] = useActivePickerId();
   const searchInputRef = useRef(null);
   const selectedOptionRef = useRef(null);
-  const selectId = useMemo(() => `picker-${crypto.randomUUID()}`, []);
+  const selectId = `options-${pickerInstanceId}`;
   const isOpen = activePicker === pickerInstanceId;
   const optionGroups = groups.length ? groups : [{ label: '', options }];
   const flatOptions = optionGroups.flatMap((group) => group.options);
