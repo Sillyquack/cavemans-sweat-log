@@ -1493,7 +1493,7 @@ function ExerciseLibrary({ workouts }) {
       <h2>Exercise Library</h2>
       <p className="muted">Your current cave-approved machine list.</p>
 
-      <div className="exercise-grid">
+      <div className="exercise-accordion">
         {Object.entries(groups).map(([group, items]) => (
           <details className="exercise-group" key={group} open={openExerciseCategory === group}>
             <summary
