@@ -1,0 +1,11 @@
+{
+  "name": "The Caveman's Sweat Log",
+  "short_name": "Sweat Log",
+  "description": "Local-first workout and body progress tracking.",
+  "start_url": "/cavemans-sweat-log/",
+  "scope": "/cavemans-sweat-log/",
+  "display": "standalone",
+  "background_color": "#070b12",
+  "theme_color": "#070b12",
+  "orientation": "portrait"
+}
