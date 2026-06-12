@@ -1619,15 +1619,30 @@ function Input({ label, value, onChange, type = 'text', step }) {
 
 function AppSelect({ value, onChange, options = [], groups = [], placeholder = 'Select', ariaLabel, className = '' }) {
   const [isOpen, setIsOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
   const pickerRef = useRef(null);
+  const searchInputRef = useRef(null);
+  const selectedOptionRef = useRef(null);
   const selectId = useMemo(() => `picker-${crypto.randomUUID()}`, []);
   const optionGroups = groups.length ? groups : [{ label: '', options }];
   const flatOptions = optionGroups.flatMap((group) => group.options);
+  const shouldShowSearch = flatOptions.length > 12;
+  const normalizedSearch = searchTerm.trim().toLowerCase();
+  const visibleGroups = normalizedSearch
+    ? optionGroups
+        .map((group) => ({
+          ...group,
+          options: group.options.filter((option) => String(option.label).toLowerCase().includes(normalizedSearch))
+        }))
+        .filter((group) => group.options.length)
+    : optionGroups;
   const selectedOption = flatOptions.find((option) => String(option.value) === String(value ?? ''));
   const displayLabel = selectedOption?.label || placeholder;
 
   useEffect(() => {
     if (!isOpen) return undefined;
+
+    document.body.classList.add('picker-open');
 
     function handlePointerDown(event) {
       if (!pickerRef.current?.contains(event.target)) {
@@ -1646,11 +1661,26 @@ function AppSelect({ value, onChange, options = [], groups = [], placeholder = '
     document.addEventListener('keydown', handleKeyDown);
 
     return () => {
+      document.body.classList.remove('picker-open');
       document.removeEventListener('mousedown', handlePointerDown);
       document.removeEventListener('touchstart', handlePointerDown);
       document.removeEventListener('keydown', handleKeyDown);
     };
   }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setSearchTerm('');
+      return;
+    }
+
+    window.requestAnimationFrame(() => {
+      if (shouldShowSearch) {
+        searchInputRef.current?.focus();
+      }
+      selectedOptionRef.current?.scrollIntoView({ block: 'nearest' });
+    });
+  }, [isOpen, shouldShowSearch]);
 
   function handleOptionSelect(option) {
     if (option.disabled) return;
@@ -1668,35 +1698,60 @@ function AppSelect({ value, onChange, options = [], groups = [], placeholder = '
         aria-expanded={isOpen}
         aria-controls={selectId}
         onClick={() => setIsOpen((current) => !current)}
+        onKeyDown={(event) => {
+          if (event.key === 'ArrowDown') {
+            event.preventDefault();
+            setIsOpen(true);
+          }
+        }}
       >
         <span>{displayLabel}</span>
         <span className="app-picker-chevron" aria-hidden="true">v</span>
       </button>
 
       {isOpen && (
-        <div className="app-picker-popover" role="listbox" id={selectId} aria-label={ariaLabel || placeholder}>
-          {optionGroups.map((group) => (
-            <div className="app-picker-group" key={group.label || 'options'}>
-              {group.label && <div className="app-picker-group-label">{group.label}</div>}
-              {group.options.map((option) => {
-                const isSelected = String(option.value) === String(value ?? '');
-                return (
-                  <button
-                    type="button"
-                    role="option"
-                    aria-selected={isSelected}
-                    className={isSelected ? 'app-picker-option selected' : 'app-picker-option'}
-                    key={`${group.label}-${option.value}`}
-                    disabled={option.disabled}
-                    onClick={() => handleOptionSelect(option)}
-                  >
-                    {option.label}
-                  </button>
-                );
-              })}
+        <>
+          <button className="app-picker-backdrop" type="button" aria-label="Close picker" onClick={() => setIsOpen(false)} />
+          <div className="app-picker-popover">
+            {shouldShowSearch && (
+              <div className="app-picker-search">
+                <input
+                  ref={searchInputRef}
+                  value={searchTerm}
+                  onChange={(event) => setSearchTerm(event.target.value)}
+                  placeholder={`Search ${placeholder.toLowerCase()}`}
+                  aria-label={`Search ${ariaLabel || placeholder}`}
+                />
+              </div>
+            )}
+            <div className="app-picker-options" role="listbox" id={selectId} aria-label={ariaLabel || placeholder}>
+              {visibleGroups.length ? visibleGroups.map((group) => (
+                <div className="app-picker-group" key={group.label || 'options'}>
+                  {group.label && <div className="app-picker-group-label">{group.label}</div>}
+                  {group.options.map((option) => {
+                    const isSelected = String(option.value) === String(value ?? '');
+                    return (
+                      <button
+                        type="button"
+                        role="option"
+                        aria-selected={isSelected}
+                        className={isSelected ? 'app-picker-option selected' : 'app-picker-option'}
+                        key={`${group.label}-${option.value}`}
+                        disabled={option.disabled}
+                        onClick={() => handleOptionSelect(option)}
+                        ref={isSelected ? selectedOptionRef : null}
+                      >
+                        {option.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              )) : (
+                <p className="app-picker-empty">No matching options.</p>
+              )}
             </div>
-          ))}
-        </div>
+          </div>
+        </>
       )}
     </div>
   );
