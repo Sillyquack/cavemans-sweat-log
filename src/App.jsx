@@ -1623,14 +1623,37 @@ function Input({ label, value, onChange, type = 'text', step }) {
   );
 }
 
+let activePickerId = null;
+const activePickerListeners = new Set();
+
+function setActivePickerId(nextPickerId) {
+  activePickerId = nextPickerId;
+  activePickerListeners.forEach((listener) => listener(activePickerId));
+}
+
+function useActivePickerId() {
+  const [currentPickerId, setCurrentPickerId] = useState(activePickerId);
+
+  useEffect(() => {
+    activePickerListeners.add(setCurrentPickerId);
+
+    return () => {
+      activePickerListeners.delete(setCurrentPickerId);
+    };
+  }, []);
+
+  return [currentPickerId, setActivePickerId];
+}
+
 function AppSelect({ value, onChange, options = [], groups = [], placeholder = 'Select', ariaLabel, className = '' }) {
-  const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const pickerRef = useRef(null);
   const pickerInstanceId = useRef(crypto.randomUUID()).current;
+  const [activePicker, setActivePicker] = useActivePickerId();
   const searchInputRef = useRef(null);
   const selectedOptionRef = useRef(null);
   const selectId = useMemo(() => `picker-${crypto.randomUUID()}`, []);
+  const isOpen = activePicker === pickerInstanceId;
   const optionGroups = groups.length ? groups : [{ label: '', options }];
   const flatOptions = optionGroups.flatMap((group) => group.options);
   const shouldShowSearch = flatOptions.length > 12;
@@ -1647,33 +1670,19 @@ function AppSelect({ value, onChange, options = [], groups = [], placeholder = '
   const displayLabel = selectedOption?.label || placeholder;
 
   useEffect(() => {
-    function handleOtherPickerOpen(event) {
-      if (event.detail !== pickerInstanceId) {
-        setIsOpen(false);
-      }
-    }
-
-    window.addEventListener('app-picker-open', handleOtherPickerOpen);
-
-    return () => {
-      window.removeEventListener('app-picker-open', handleOtherPickerOpen);
-    };
-  }, [pickerInstanceId]);
-
-  useEffect(() => {
     if (!isOpen) return undefined;
 
     document.body.classList.add('picker-open');
 
     function handlePointerDown(event) {
       if (!pickerRef.current?.contains(event.target)) {
-        setIsOpen(false);
+        setActivePicker(null);
       }
     }
 
     function handleKeyDown(event) {
       if (event.key === 'Escape') {
-        setIsOpen(false);
+        setActivePicker(null);
       }
     }
 
@@ -1687,7 +1696,7 @@ function AppSelect({ value, onChange, options = [], groups = [], placeholder = '
       document.removeEventListener('touchstart', handlePointerDown);
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [isOpen]);
+  }, [isOpen, setActivePicker]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -1706,17 +1715,16 @@ function AppSelect({ value, onChange, options = [], groups = [], placeholder = '
   function handleOptionSelect(option) {
     if (option.disabled) return;
     onChange(option.value);
-    setIsOpen(false);
+    setActivePicker(null);
   }
 
   function openPicker() {
-    window.dispatchEvent(new CustomEvent('app-picker-open', { detail: pickerInstanceId }));
-    setIsOpen(true);
+    setActivePicker(pickerInstanceId);
   }
 
   function togglePicker() {
     if (isOpen) {
-      setIsOpen(false);
+      setActivePicker(null);
       return;
     }
 
@@ -1746,7 +1754,7 @@ function AppSelect({ value, onChange, options = [], groups = [], placeholder = '
 
       {isOpen && (
         <>
-          <button className="app-picker-backdrop" type="button" aria-label="Close picker" onClick={() => setIsOpen(false)} />
+          <button className="app-picker-backdrop" type="button" aria-label="Close picker" onClick={() => setActivePicker(null)} />
           <div className="app-picker-popover">
             {shouldShowSearch && (
               <div className="app-picker-search">
