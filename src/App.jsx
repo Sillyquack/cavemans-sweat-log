@@ -414,6 +414,7 @@ function App() {
   const [profile, setProfile] = useState(() => getEmptyProfile());
   const [bodyLogs, setBodyLogs] = useState([]);
   const [workouts, setWorkouts] = useState([]);
+  const [updatePrompt, setUpdatePrompt] = useState(null);
   const isManager = currentUser?.username === 'manager';
   const currentStorageKeys = currentUser && !isManager ? getUserStorageKeys(currentUser.username) : null;
   const activeTheme = getThemeOption(!currentUser || isManager ? DEFAULT_THEME_ID : profile.theme);
@@ -427,6 +428,20 @@ function App() {
       document.body.classList.remove(...themeClasses);
     };
   }, [activeTheme.className]);
+
+  useEffect(() => {
+    function handleUpdateAvailable(event) {
+      setUpdatePrompt({
+        update: event.detail?.update
+      });
+    }
+
+    window.addEventListener('caveman:update-available', handleUpdateAvailable);
+
+    return () => {
+      window.removeEventListener('caveman:update-available', handleUpdateAvailable);
+    };
+  }, []);
 
   function handleLogin(username, password) {
     const normalizedUsername = username.trim().toLowerCase();
@@ -587,12 +602,18 @@ function App() {
   }
 
   if (!currentUser) {
-    return <Login onLogin={handleLogin} />;
+    return (
+      <>
+        <Login onLogin={handleLogin} />
+        <UpdatePrompt prompt={updatePrompt} onDismiss={() => setUpdatePrompt(null)} />
+      </>
+    );
   }
 
   if (isManager) {
     return (
       <div className="app-shell">
+        <UpdatePrompt prompt={updatePrompt} onDismiss={() => setUpdatePrompt(null)} />
         <header className="hero">
           <div>
             <p className="eyebrow">Manager</p>
@@ -615,6 +636,7 @@ function App() {
 
   return (
     <div className="app-shell">
+      <UpdatePrompt prompt={updatePrompt} onDismiss={() => setUpdatePrompt(null)} />
       <header className="hero">
         <div>
           <p className="eyebrow">🪨 The Cave Project</p>
@@ -644,6 +666,32 @@ function App() {
         {activeTab === 'settings' && <Settings profile={profile} onSave={updateProfile} onExport={exportData} onImport={importData} />}
       </main>
     </div>
+  );
+}
+
+function UpdatePrompt({ prompt, onDismiss }) {
+  const [isUpdating, setIsUpdating] = useState(false);
+
+  if (!prompt) return null;
+
+  function handleUpdate() {
+    setIsUpdating(true);
+    prompt.update?.();
+  }
+
+  return (
+    <aside className="update-prompt" role="status" aria-live="polite">
+      <div>
+        <strong>Update available</strong>
+        <p>A new version of The Caveman&apos;s Sweat Log is ready.</p>
+      </div>
+      <div className="update-actions">
+        <button className="primary small" type="button" onClick={handleUpdate} disabled={isUpdating}>
+          {isUpdating ? 'Updating...' : 'Update now'}
+        </button>
+        <button className="ghost small" type="button" onClick={onDismiss} aria-label="Dismiss update notice">Dismiss</button>
+      </div>
+    </aside>
   );
 }
 

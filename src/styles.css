@@ -352,6 +352,45 @@ small {
   font-size: 0.82rem;
 }
 
+.update-prompt {
+  position: fixed;
+  left: 50%;
+  bottom: 18px;
+  z-index: 80;
+  width: min(560px, calc(100% - 24px));
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: center;
+  padding: 14px;
+  border: 1px solid var(--accent-line);
+  border-radius: var(--radius);
+  color: var(--text);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.075), transparent 70%),
+    radial-gradient(circle at top right, var(--surface-glow), transparent 14rem),
+    var(--panel-2);
+  box-shadow:
+    0 24px 60px rgba(0, 0, 0, 0.62),
+    0 0 28px rgba(var(--accent-rgb), 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  transform: translateX(-50%);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.update-prompt p {
+  margin: 4px 0 0;
+  color: var(--muted);
+}
+
+.update-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: end;
+}
+
 .tabs {
   position: sticky;
   top: 0;
@@ -1316,6 +1355,20 @@ small {
     white-space: nowrap;
     padding: 10px 12px;
     min-height: 42px;
+  }
+
+  .update-prompt {
+    display: grid;
+    bottom: 10px;
+    padding: 12px;
+  }
+
+  .update-actions {
+    justify-content: stretch;
+  }
+
+  .update-actions button {
+    flex: 1;
   }
 
   .card {
