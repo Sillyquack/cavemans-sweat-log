@@ -1114,12 +1114,14 @@ small {
 .exercise-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  align-items: start;
   gap: 14px;
   margin-top: 18px;
 }
 
 .exercise-group {
   display: grid;
+  align-self: start;
   align-content: start;
   border: 1px solid rgba(var(--accent-rgb), 0.16);
   border-radius: var(--radius);
