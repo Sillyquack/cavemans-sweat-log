@@ -208,6 +208,23 @@ function getThemeOption(themeId) {
   return THEME_OPTIONS.find((theme) => theme.id === themeId) || THEME_OPTIONS[0];
 }
 
+function triggerHaptic(type = 'light') {
+  if (typeof navigator === 'undefined' || typeof navigator.vibrate !== 'function') return;
+
+  const patterns = {
+    light: 10,
+    medium: 20,
+    success: [10, 35, 15],
+    error: 30
+  };
+
+  try {
+    navigator.vibrate(patterns[type] || patterns.light);
+  } catch {
+    // Unsupported browsers should behave exactly the same without haptics.
+  }
+}
+
 function getBodyMetricLogs(bodyLogs, field) {
   return sortByDateDesc(bodyLogs)
     .filter((log) => toOptionalNumber(log[field]) !== null)
@@ -493,6 +510,7 @@ function App() {
     const nextLogs = sortByDateDesc([nextLog, ...bodyLogs]);
     setBodyLogs(nextLogs);
     saveToStorage(currentStorageKeys.bodyLogs, nextLogs);
+    triggerHaptic('success');
   }
 
   function deleteBodyLog(id) {
@@ -512,6 +530,7 @@ function App() {
     const nextWorkouts = sortByDateDesc([nextWorkout, ...workouts]);
     setWorkouts(nextWorkouts);
     saveToStorage(currentStorageKeys.workouts, nextWorkouts);
+    triggerHaptic('success');
   }
 
   function deleteWorkout(id) {
@@ -599,6 +618,7 @@ function App() {
     saveToStorage(currentStorageKeys.profile, nextProfile);
     saveToStorage(currentStorageKeys.bodyLogs, nextBodyLogs);
     saveToStorage(currentStorageKeys.workouts, nextWorkouts);
+    triggerHaptic('success');
   }
 
   if (!currentUser) {
@@ -1309,6 +1329,7 @@ function WorkoutLog({ workouts, onAdd, onDelete }) {
   function addExerciseEntry() {
     const exercise = getExerciseById(selectedExerciseId);
     setEntries([...entries, createExerciseEntry(exercise)]);
+    triggerHaptic('medium');
   }
 
   function applyTemplate() {
@@ -1329,6 +1350,7 @@ function WorkoutLog({ workouts, onAdd, onDelete }) {
       setTitle(template.name);
     }
     setEntries([...entries, ...templateEntries]);
+    triggerHaptic('medium');
   }
 
   function updateSet(entryId, setIndex, field, value) {
@@ -1345,18 +1367,23 @@ function WorkoutLog({ workouts, onAdd, onDelete }) {
       const lastSet = entry.sets[entry.sets.length - 1] || { kg: '', reps: 12 };
       return { ...entry, sets: [...entry.sets, { ...lastSet }] };
     }));
+    triggerHaptic('light');
   }
 
   function removeSet(entryId, setIndex) {
+    let didRemove = false;
     setEntries(entries.map((entry) => {
       if (entry.id !== entryId) return entry;
       if (entry.sets.length <= 1) return entry;
+      didRemove = true;
       return { ...entry, sets: entry.sets.filter((_, index) => index !== setIndex) };
     }));
+    if (didRemove) triggerHaptic('light');
   }
 
   function removeEntry(entryId) {
     setEntries(entries.filter((entry) => entry.id !== entryId));
+    triggerHaptic('light');
   }
 
   function updateEntryNote(entryId, value) {
@@ -1548,6 +1575,7 @@ function ExerciseLibrary({ workouts }) {
               onClick={(event) => {
                 event.preventDefault();
                 setOpenExerciseCategory(openExerciseCategory === group ? null : group);
+                triggerHaptic('light');
               }}
             >
               <span>{group}</span>
@@ -1591,6 +1619,7 @@ function Settings({ profile, onSave, onExport, onImport }) {
     const nextForm = { ...form, theme: themeId };
     setForm(nextForm);
     onSave({ ...nextForm, weeklyGoal: getWeeklyGoalValue(nextForm.weeklyGoal), theme: themeId });
+    triggerHaptic('medium');
   }
 
   function handleImport(event) {
@@ -1771,10 +1800,12 @@ function AppSelect({ pickerId, value, onChange, options = [], groups = [], place
     if (option.disabled) return;
     onChange(option.value);
     setActivePicker(null);
+    triggerHaptic('light');
   }
 
   function openPicker() {
     setActivePicker(pickerInstanceId);
+    triggerHaptic('light');
   }
 
   function togglePicker() {
