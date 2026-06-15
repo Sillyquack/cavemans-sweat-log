@@ -432,6 +432,8 @@ function App() {
   const [bodyLogs, setBodyLogs] = useState([]);
   const [workouts, setWorkouts] = useState([]);
   const [updatePrompt, setUpdatePrompt] = useState(null);
+  const [toast, setToast] = useState(null);
+  const toastTimeoutRef = useRef(null);
   const isManager = currentUser?.username === 'manager';
   const currentStorageKeys = currentUser && !isManager ? getUserStorageKeys(currentUser.username) : null;
   const activeTheme = getThemeOption(!currentUser || isManager ? DEFAULT_THEME_ID : profile.theme);
@@ -459,6 +461,25 @@ function App() {
       window.removeEventListener('caveman:update-available', handleUpdateAvailable);
     };
   }, []);
+
+  useEffect(() => {
+    return () => {
+      if (toastTimeoutRef.current) {
+        window.clearTimeout(toastTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  function showToast(message, type = 'success') {
+    if (toastTimeoutRef.current) {
+      window.clearTimeout(toastTimeoutRef.current);
+    }
+
+    setToast({ id: crypto.randomUUID(), message, type });
+    toastTimeoutRef.current = window.setTimeout(() => {
+      setToast(null);
+    }, 2400);
+  }
 
   function handleLogin(username, password) {
     const normalizedUsername = username.trim().toLowerCase();
@@ -511,6 +532,7 @@ function App() {
     setBodyLogs(nextLogs);
     saveToStorage(currentStorageKeys.bodyLogs, nextLogs);
     triggerHaptic('success');
+    showToast('Body log saved ✓');
   }
 
   function deleteBodyLog(id) {
@@ -531,6 +553,7 @@ function App() {
     setWorkouts(nextWorkouts);
     saveToStorage(currentStorageKeys.workouts, nextWorkouts);
     triggerHaptic('success');
+    showToast('Workout saved ✓');
   }
 
   function deleteWorkout(id) {
@@ -569,6 +592,7 @@ function App() {
       link.click();
       link.remove();
       URL.revokeObjectURL(url);
+      showToast('Data exported ✓');
       return;
     }
 
@@ -591,6 +615,7 @@ function App() {
     link.click();
     link.remove();
     URL.revokeObjectURL(url);
+    showToast('Data exported ✓');
   }
 
   function importData(data) {
@@ -619,6 +644,7 @@ function App() {
     saveToStorage(currentStorageKeys.bodyLogs, nextBodyLogs);
     saveToStorage(currentStorageKeys.workouts, nextWorkouts);
     triggerHaptic('success');
+    showToast('Data imported ✓');
   }
 
   if (!currentUser) {
@@ -626,6 +652,7 @@ function App() {
       <>
         <Login onLogin={handleLogin} />
         <UpdatePrompt prompt={updatePrompt} onDismiss={() => setUpdatePrompt(null)} />
+        <Toast toast={toast} />
       </>
     );
   }
@@ -634,6 +661,7 @@ function App() {
     return (
       <div className="app-shell">
         <UpdatePrompt prompt={updatePrompt} onDismiss={() => setUpdatePrompt(null)} />
+        <Toast toast={toast} />
         <header className="hero">
           <div>
             <p className="eyebrow">Manager</p>
@@ -657,6 +685,7 @@ function App() {
   return (
     <div className="app-shell">
       <UpdatePrompt prompt={updatePrompt} onDismiss={() => setUpdatePrompt(null)} />
+      <Toast toast={toast} />
       <header className="hero">
         <div>
           <p className="eyebrow">🪨 The Cave Project</p>
@@ -681,9 +710,9 @@ function App() {
       <main>
         {activeTab === 'dashboard' && <Dashboard profile={profile} bodyLogs={bodyLogs} workouts={workouts} />}
         {activeTab === 'body' && <BodyLog profile={profile} bodyLogs={bodyLogs} onAdd={addBodyLog} onDelete={deleteBodyLog} />}
-        {activeTab === 'workout' && <WorkoutLog workouts={workouts} onAdd={addWorkout} onDelete={deleteWorkout} />}
+        {activeTab === 'workout' && <WorkoutLog workouts={workouts} onAdd={addWorkout} onDelete={deleteWorkout} onToast={showToast} />}
         {activeTab === 'exercises' && <ExerciseLibrary workouts={workouts} />}
-        {activeTab === 'settings' && <Settings profile={profile} onSave={updateProfile} onExport={exportData} onImport={importData} />}
+        {activeTab === 'settings' && <Settings profile={profile} onSave={updateProfile} onExport={exportData} onImport={importData} onToast={showToast} />}
       </main>
     </div>
   );
@@ -712,6 +741,18 @@ function UpdatePrompt({ prompt, onDismiss }) {
         <button className="ghost small" type="button" onClick={onDismiss} aria-label="Dismiss update notice">Dismiss</button>
       </div>
     </aside>
+  );
+}
+
+function Toast({ toast }) {
+  if (!toast) return null;
+
+  return (
+    <div className="toast-stack" role="status" aria-live="polite">
+      <div className={`toast toast-${toast.type}`} key={toast.id}>
+        <span>{toast.message}</span>
+      </div>
+    </div>
   );
 }
 
@@ -1272,7 +1313,7 @@ function BodyLog({ profile, bodyLogs, onAdd, onDelete }) {
   );
 }
 
-function WorkoutLog({ workouts, onAdd, onDelete }) {
+function WorkoutLog({ workouts, onAdd, onDelete, onToast }) {
   const [title, setTitle] = useState('Upper Body');
   const [date, setDate] = useState(getTodayISO());
   const [note, setNote] = useState('');
@@ -1330,6 +1371,7 @@ function WorkoutLog({ workouts, onAdd, onDelete }) {
     const exercise = getExerciseById(selectedExerciseId);
     setEntries([...entries, createExerciseEntry(exercise)]);
     triggerHaptic('medium');
+    onToast?.('Exercise added ✓');
   }
 
   function applyTemplate() {
@@ -1351,6 +1393,7 @@ function WorkoutLog({ workouts, onAdd, onDelete }) {
     }
     setEntries([...entries, ...templateEntries]);
     triggerHaptic('medium');
+    onToast?.('Template applied ✓');
   }
 
   function updateSet(entryId, setIndex, field, value) {
@@ -1368,6 +1411,7 @@ function WorkoutLog({ workouts, onAdd, onDelete }) {
       return { ...entry, sets: [...entry.sets, { ...lastSet }] };
     }));
     triggerHaptic('light');
+    onToast?.('Set added ✓');
   }
 
   function removeSet(entryId, setIndex) {
@@ -1378,12 +1422,16 @@ function WorkoutLog({ workouts, onAdd, onDelete }) {
       didRemove = true;
       return { ...entry, sets: entry.sets.filter((_, index) => index !== setIndex) };
     }));
-    if (didRemove) triggerHaptic('light');
+    if (didRemove) {
+      triggerHaptic('light');
+      onToast?.('Set removed ✓');
+    }
   }
 
   function removeEntry(entryId) {
     setEntries(entries.filter((entry) => entry.id !== entryId));
     triggerHaptic('light');
+    onToast?.('Exercise removed ✓');
   }
 
   function updateEntryNote(entryId, value) {
@@ -1604,7 +1652,7 @@ function ExerciseLibrary({ workouts }) {
   );
 }
 
-function Settings({ profile, onSave, onExport, onImport }) {
+function Settings({ profile, onSave, onExport, onImport, onToast }) {
   const [form, setForm] = useState(profile);
   const age = form.birthYear ? new Date().getFullYear() - Number(form.birthYear) : null;
   const weeklyGoal = getWeeklyGoalValue(form.weeklyGoal);
@@ -1620,6 +1668,7 @@ function Settings({ profile, onSave, onExport, onImport }) {
     setForm(nextForm);
     onSave({ ...nextForm, weeklyGoal: getWeeklyGoalValue(nextForm.weeklyGoal), theme: themeId });
     triggerHaptic('medium');
+    onToast?.('Theme updated ✓');
   }
 
   function handleImport(event) {

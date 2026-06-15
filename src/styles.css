@@ -391,6 +391,65 @@ small {
   justify-content: end;
 }
 
+.toast-stack {
+  position: fixed;
+  top: 18px;
+  left: 50%;
+  z-index: 90;
+  width: min(420px, calc(100% - 24px));
+  pointer-events: none;
+  transform: translateX(-50%);
+}
+
+.toast {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 12px 14px;
+  border: 1px solid var(--accent-line);
+  border-radius: var(--radius);
+  color: var(--text);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.11), rgba(255, 255, 255, 0.035)),
+    radial-gradient(circle at top right, var(--surface-glow), transparent 14rem),
+    var(--panel-2);
+  box-shadow:
+    0 20px 52px rgba(0, 0, 0, 0.48),
+    0 0 26px rgba(var(--accent-rgb), 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  animation: toast-in 0.22s ease-out both;
+}
+
+.toast::before {
+  content: "";
+  width: 9px;
+  height: 9px;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--accent), var(--ember));
+  box-shadow: 0 0 16px rgba(var(--accent-rgb), 0.52);
+}
+
+.toast span {
+  font-size: 0.92rem;
+  font-weight: 850;
+  letter-spacing: -0.01em;
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 .tabs {
   position: sticky;
   top: 0;
@@ -425,7 +484,8 @@ small {
     transform 0.12s ease,
     border-color 0.12s ease,
     background 0.12s ease,
-    color 0.12s ease;
+    color 0.12s ease,
+    box-shadow 0.12s ease;
 }
 
 .tabs button:hover,
@@ -434,6 +494,14 @@ small {
 .ghost:hover {
   transform: translateY(-1px);
   border-color: var(--line-strong);
+}
+
+.tabs button:active,
+.primary:active,
+.secondary:active,
+.ghost:active,
+.app-picker-trigger:active {
+  transform: translateY(0) scale(0.985);
 }
 
 .tabs button.active,
@@ -522,6 +590,17 @@ small {
     inset 0 1px 0 rgba(255, 255, 255, 0.045);
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
+  transition:
+    transform 0.16s ease,
+    border-color 0.16s ease,
+    box-shadow 0.16s ease,
+    background-color 0.16s ease;
+}
+
+@media (hover: hover) {
+  .card:hover {
+    transform: translateY(-1px);
+  }
 }
 
 .big-card {
@@ -799,6 +878,20 @@ small {
     inset 0 1px 0 rgba(255, 255, 255, 0.08);
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
+  transform-origin: top center;
+  animation: picker-popover-in 0.16s ease-out both;
+}
+
+@keyframes picker-popover-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.985);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 .app-picker-search {
@@ -1035,6 +1128,11 @@ small {
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.045), transparent),
     rgba(255, 255, 255, 0.035);
+  transition:
+    transform 0.16s ease,
+    border-color 0.16s ease,
+    background-color 0.16s ease,
+    box-shadow 0.16s ease;
 }
 
 .log-item:hover,
@@ -1045,6 +1143,17 @@ small {
 .exercise-progress-row:hover {
   border-color: rgba(var(--accent-rgb), 0.24);
   background-color: rgba(255, 255, 255, 0.035);
+}
+
+@media (hover: hover) {
+  .log-item:hover,
+  .workout-history-card:hover,
+  .exercise-entry:hover,
+  .exercise-card:hover,
+  .record-item:hover,
+  .exercise-progress-row:hover {
+    transform: translateY(-1px);
+  }
 }
 
 .log-item {
@@ -1171,6 +1280,18 @@ small {
     inset 0 1px 0 rgba(255, 255, 255, 0.045),
     0 14px 32px rgba(0, 0, 0, 0.18);
   overflow: hidden;
+  transition:
+    border-color 0.16s ease,
+    box-shadow 0.16s ease,
+    background 0.16s ease;
+}
+
+.exercise-group[open] {
+  border-color: var(--accent-line);
+  box-shadow:
+    0 18px 42px rgba(0, 0, 0, 0.24),
+    0 0 24px rgba(var(--accent-rgb), 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
 .exercise-group summary {
@@ -1248,6 +1369,19 @@ small {
   gap: 12px;
   padding: 16px;
   background: rgba(0, 0, 0, 0.08);
+  animation: accordion-content-in 0.18s ease-out both;
+}
+
+@keyframes accordion-content-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .exercise-card {
@@ -1363,6 +1497,15 @@ small {
     padding: 12px;
   }
 
+  .toast-stack {
+    top: 10px;
+    width: min(420px, calc(100% - 20px));
+  }
+
+  .toast {
+    padding: 11px 12px;
+  }
+
   .update-actions {
     justify-content: stretch;
   }
@@ -1440,6 +1583,20 @@ small {
     max-height: min(70vh, 480px);
     padding: 12px;
     border-radius: var(--radius-soft);
+    transform-origin: bottom center;
+    animation: picker-sheet-in 0.18s ease-out both;
+  }
+
+  @keyframes picker-sheet-in {
+    from {
+      opacity: 0;
+      transform: translateY(16px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 
   .app-picker-search {
@@ -1478,5 +1635,16 @@ small {
   .exercise-card {
     min-height: auto;
     padding: 14px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.001ms !important;
   }
 }
