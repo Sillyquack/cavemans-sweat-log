@@ -10,7 +10,7 @@ const LEGACY_STORAGE_KEYS = {
 };
 
 const APP_VERSION = 'v0.4.0';
-const APP_VERSION_CONTEXT = 'Local data app Â· GitHub Pages version';
+const APP_VERSION_CONTEXT = 'Local data app - GitHub Pages version';
 const DEFAULT_WEEKLY_WORKOUT_GOAL = 3;
 const DEFAULT_THEME_ID = 'apple-glass';
 
@@ -560,7 +560,7 @@ function App() {
     setBodyLogs(nextLogs);
     saveToStorage(currentStorageKeys.bodyLogs, nextLogs);
     triggerHaptic('success');
-    showToast('Body log saved âœ“');
+    showToast('Body log saved OK');
   }
 
   function deleteBodyLog(id) {
@@ -581,7 +581,7 @@ function App() {
     setWorkouts(nextWorkouts);
     saveToStorage(currentStorageKeys.workouts, nextWorkouts);
     triggerHaptic('success');
-    showToast('Workout saved âœ“');
+    showToast('Workout saved OK');
   }
 
   function deleteWorkout(id) {
@@ -620,12 +620,12 @@ function App() {
       link.click();
       link.remove();
       URL.revokeObjectURL(url);
-      showToast('Data exported âœ“');
+      showToast('Data exported OK');
       return;
     }
 
     const backup = {
-      app: 'The Cavemanâ€™s Sweat Log',
+      app: "The Caveman's Sweat Log",
       version: 1,
       exportedAt: new Date().toISOString(),
       username: currentUser.username,
@@ -643,7 +643,7 @@ function App() {
     link.click();
     link.remove();
     URL.revokeObjectURL(url);
-    showToast('Data exported âœ“');
+    showToast('Data exported OK');
   }
 
   function importData(data) {
@@ -672,7 +672,7 @@ function App() {
     saveToStorage(currentStorageKeys.bodyLogs, nextBodyLogs);
     saveToStorage(currentStorageKeys.workouts, nextWorkouts);
     triggerHaptic('success');
-    showToast('Data imported âœ“');
+    showToast('Data imported OK');
   }
 
   if (!currentUser) {
@@ -716,8 +716,8 @@ function App() {
       <Toast toast={toast} />
       <header className="hero">
         <div>
-          <p className="eyebrow">ðŸª¨ The Cave Project</p>
-          <h1>The Cavemanâ€™s Sweat Log</h1>
+          <p className="eyebrow">The Cave Project</p>
+          <h1>The Caveman's Sweat Log</h1>
           <p className="tagline">Lift. Log. Evolve.</p>
         </div>
         <div className="hero-card">
@@ -860,7 +860,7 @@ function Dashboard({ profile, bodyLogs, workouts }) {
       <article className="card stats-card">
         <Stat label="Latest weight" value={`${formatNumber(latestWeight)} kg`} />
         <Stat label="Latest waist" value={`${formatNumber(latestWaist)} cm`} />
-        <Stat label="Current BMI" value={latestBMI ? `${latestBMI} Â· ${getBMICategory(latestBMI)}` : '-'} />
+        <Stat label="Current BMI" value={latestBMI ? `${latestBMI} - ${getBMICategory(latestBMI)}` : '-'} />
         <Stat label="Workouts last 7 days" value={thisWeekWorkouts} />
       </article>
 
@@ -928,7 +928,7 @@ function Dashboard({ profile, bodyLogs, workouts }) {
             <p><strong>{latestBody.date}</strong></p>
             <p>Weight: {formatNumber(latestBody.weightKg)} kg</p>
             <p>Waist: {formatNumber(latestBody.waistCm)} cm</p>
-            <p>BMI: {latestBody.bmi || '-'} {latestBody.bmiCategory ? `Â· ${latestBody.bmiCategory}` : ''}</p>
+            <p>BMI: {latestBody.bmi || '-'} {latestBody.bmiCategory ? `- ${latestBody.bmiCategory}` : ''}</p>
           </div>
         ) : (
           <p>No body logs yet. Start with weight and waist.</p>
@@ -939,7 +939,7 @@ function Dashboard({ profile, bodyLogs, workouts }) {
         <h3>Latest Workout</h3>
         {latestWorkout ? (
           <div className="simple-list">
-            <p><strong>{latestWorkout.title}</strong> Â· {latestWorkout.date}</p>
+            <p><strong>{latestWorkout.title}</strong> - {latestWorkout.date}</p>
             <p>{latestWorkout.entries.length} exercise entries</p>
             <p>{latestWorkout.note || 'No note'}</p>
           </div>
@@ -1199,7 +1199,7 @@ function ManagerDashboard({ users, onExport }) {
         <h3>User Overview</h3>
         <div className="simple-list">
           {users.map((user) => (
-            <p key={user.username}><strong>{user.name}</strong> Â· {user.username}</p>
+            <p key={user.username}><strong>{user.name}</strong> - {user.username}</p>
           ))}
         </div>
       </article>
@@ -1246,7 +1246,7 @@ function ManagerDashboard({ users, onExport }) {
           <div className="simple-list">
             {recentItems.map((item) => (
               <div key={item.label}>
-                <p><strong>{item.label}</strong> Â· {item.date}</p>
+                <p><strong>{item.label}</strong> - {item.date}</p>
                 <p>{item.detail}</p>
               </div>
             ))}
@@ -1314,7 +1314,7 @@ function BodyLog({ profile, bodyLogs, onAdd, onDelete }) {
 
           <div className="preview-box full">
             <span>BMI preview</span>
-            <strong>{previewBMI ? `${previewBMI} Â· ${getBMICategory(previewBMI)}` : 'Add weight + height'}</strong>
+            <strong>{previewBMI ? `${previewBMI} - ${getBMICategory(previewBMI)}` : 'Add weight + height'}</strong>
           </div>
 
           <button className="primary full" type="submit">Save Body Log</button>
@@ -1329,7 +1329,7 @@ function BodyLog({ profile, bodyLogs, onAdd, onDelete }) {
             <div className="log-item" key={log.id}>
               <div>
                 <strong>{log.date}</strong>
-                <p>{log.weightKg || '-'} kg Â· waist {log.waistCm || '-'} cm Â· BMI {log.bmi || '-'}</p>
+                <p>{log.weightKg || '-'} kg - waist {log.waistCm || '-'} cm - BMI {log.bmi || '-'}</p>
                 {log.note && <small>{log.note}</small>}
               </div>
               <button className="ghost danger" onClick={() => onDelete(log.id)}>Delete</button>
@@ -1399,7 +1399,7 @@ function WorkoutLog({ workouts, onAdd, onDelete, onToast }) {
     const exercise = getExerciseById(selectedExerciseId);
     setEntries([...entries, createExerciseEntry(exercise)]);
     triggerHaptic('medium');
-    onToast?.('Exercise added âœ“');
+    onToast?.('Exercise added OK');
   }
 
   function applyTemplate() {
@@ -1421,7 +1421,7 @@ function WorkoutLog({ workouts, onAdd, onDelete, onToast }) {
     }
     setEntries([...entries, ...templateEntries]);
     triggerHaptic('medium');
-    onToast?.('Template applied âœ“');
+    onToast?.('Template applied OK');
   }
 
   function updateSet(entryId, setIndex, field, value) {
@@ -1472,7 +1472,7 @@ function WorkoutLog({ workouts, onAdd, onDelete, onToast }) {
 
     if (didCopy) {
       triggerHaptic('light');
-      onToast?.('Values copied âœ“');
+      onToast?.('Values copied OK');
       return;
     }
 
@@ -1487,7 +1487,7 @@ function WorkoutLog({ workouts, onAdd, onDelete, onToast }) {
       return { ...entry, sets: [...entry.sets, { ...lastSet }] };
     }));
     triggerHaptic('light');
-    onToast?.('Set added âœ“');
+    onToast?.('Set added OK');
   }
 
   function removeSet(entryId, setIndex) {
@@ -1500,14 +1500,14 @@ function WorkoutLog({ workouts, onAdd, onDelete, onToast }) {
     }));
     if (didRemove) {
       triggerHaptic('light');
-      onToast?.('Set removed âœ“');
+      onToast?.('Set removed OK');
     }
   }
 
   function removeEntry(entryId) {
     setEntries(entries.filter((entry) => entry.id !== entryId));
     triggerHaptic('light');
-    onToast?.('Exercise removed âœ“');
+    onToast?.('Exercise removed OK');
   }
 
   function updateEntryNote(entryId, value) {
@@ -1626,7 +1626,7 @@ function WorkoutLog({ workouts, onAdd, onDelete, onToast }) {
                           ariaLabel={entry.exerciseId === 'treadmill' ? 'Minutes' : 'Reps'}
                         />
                         <button type="button" className="secondary use-last-button" onClick={() => useLastValues(entry.id, index)}>Use last</button>
-                        <button type="button" className="ghost danger mini" onClick={() => removeSet(entry.id, index)} aria-label="Remove set">Ã—</button>
+                        <button type="button" className="ghost danger mini" onClick={() => removeSet(entry.id, index)} aria-label="Remove set">x</button>
                       </div>
                     ))}
                   </div>
@@ -1716,7 +1716,7 @@ function ExerciseLibrary({ workouts }) {
                       <strong>{exercise.name}</strong>
                       <span>{exercise.norwegianName}</span>
                     </div>
-                    <p>{exercise.defaultSets} x {exercise.defaultReps} Â· {exercise.equipment}</p>
+                    <p>{exercise.defaultSets} x {exercise.defaultReps} - {exercise.equipment}</p>
                     {last && <p className="last-line">Last: {formatSets(last.entry.sets)}</p>}
                     <small>{exercise.note}</small>
                   </div>
@@ -1746,7 +1746,7 @@ function Settings({ profile, onSave, onExport, onImport, onToast }) {
     setForm(nextForm);
     onSave({ ...nextForm, weeklyGoal: getWeeklyGoalValue(nextForm.weeklyGoal), theme: themeId });
     triggerHaptic('medium');
-    onToast?.('Theme updated âœ“');
+    onToast?.('Theme updated OK');
   }
 
   function handleImport(event) {
