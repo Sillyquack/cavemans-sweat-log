@@ -1884,3 +1884,15 @@ small {
     max-height: 48dvh;
   }
 }
+
+/* Fix centered mobile picker modal positioning */
+@media (max-width: 820px), (hover: none) and (pointer: coarse) {
+  .app-select-mobile-modal {
+    inset: auto !important;
+    top: 50% !important;
+    left: 50% !important;
+    right: auto !important;
+    bottom: auto !important;
+    transform: translate(-50%, -50%) !important;
+  }
+}
