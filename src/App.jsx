@@ -262,17 +262,46 @@ function getBodyMetricLogs(bodyLogs, field) {
     }));
 }
 
+function getExerciseFromEntry(entry) {
+  const byId = getExerciseById(entry?.exerciseId);
+  if (byId) return byId;
+
+  const entryName = normalizeExerciseMatchValue(entry?.exerciseName || entry?.name || entry?.exercise?.name);
+  if (!entryName) return null;
+
+  return exercises.find((exercise) => normalizeExerciseMatchValue(exercise.name) === entryName);
+}
+
+function getExerciseEntryKey(entry) {
+  const matchedExercise = getExerciseFromEntry(entry);
+  if (matchedExercise?.id) return matchedExercise.id;
+  if (entry?.exerciseId) return String(entry.exerciseId);
+
+  const entryName = normalizeExerciseMatchValue(entry?.exerciseName || entry?.name || entry?.exercise?.name);
+  return entryName ? `name:${entryName}` : '';
+}
+
+function getExerciseEntryName(entry, fallbackKey = '') {
+  const matchedExercise = getExerciseFromEntry(entry);
+  if (matchedExercise?.name) return matchedExercise.name;
+
+  return entry?.exerciseName || entry?.name || fallbackKey.replace(/^name:/, '') || 'Exercise';
+}
+
 function getPersonalRecords(workouts) {
   const records = new Map();
 
   for (const workout of workouts) {
     for (const entry of workout.entries || []) {
+      const exerciseKey = getExerciseEntryKey(entry);
+      if (!exerciseKey) continue;
+
       const validSets = getValidSets(entry.sets);
       if (!validSets.length) continue;
 
-      const current = records.get(entry.exerciseId) || {
-        exerciseId: entry.exerciseId,
-        exerciseName: entry.exerciseName,
+      const current = records.get(exerciseKey) || {
+        exerciseId: exerciseKey,
+        exerciseName: getExerciseEntryName(entry, exerciseKey),
         bestKg: null,
         bestRepsAtBestKg: null,
         bestVolume: null,
@@ -296,7 +325,7 @@ function getPersonalRecords(workouts) {
         current.latestDate = workout.date;
       }
 
-      records.set(entry.exerciseId, current);
+      records.set(exerciseKey, current);
     }
   }
 
@@ -310,12 +339,13 @@ function getExerciseProgressOptions(workouts) {
 
   for (const workout of sortByDateDesc(workouts)) {
     for (const entry of workout.entries || []) {
-      if (!entry.exerciseId || options.has(entry.exerciseId)) continue;
+      const exerciseKey = getExerciseEntryKey(entry);
+      if (!exerciseKey || options.has(exerciseKey)) continue;
       if (!getValidSets(entry.sets).length) continue;
 
-      options.set(entry.exerciseId, {
-        exerciseId: entry.exerciseId,
-        exerciseName: entry.exerciseName
+      options.set(exerciseKey, {
+        exerciseId: exerciseKey,
+        exerciseName: getExerciseEntryName(entry, exerciseKey)
       });
     }
   }
@@ -330,7 +360,7 @@ function getExerciseProgress(workouts, exerciseId) {
 
   for (const workout of workouts) {
     for (const entry of workout.entries || []) {
-      if (entry.exerciseId !== exerciseId) continue;
+      if (getExerciseEntryKey(entry) !== exerciseId) continue;
 
       const validSets = getValidSets(entry.sets);
       if (!validSets.length) continue;
@@ -1000,27 +1030,52 @@ function WeeklyGoalCard({ stats }) {
 }
 
 function ExerciseProgressCard({ options, selectedExerciseId, onSelectExercise, progress }) {
+  const metricOptions = [
+    { key: 'totalVolume', label: 'Total volume', shortLabel: 'Volume', decimals: 0, suffix: '' },
+    { key: 'bestKg', label: 'Best kg', shortLabel: 'Best kg', decimals: 1, suffix: ' kg' },
+    { key: 'bestSetVolume', label: 'Best set volume', shortLabel: 'Set volume', decimals: 0, suffix: '' }
+  ];
+  const [selectedMetricKey, setSelectedMetricKey] = useState('totalVolume');
+  const activeMetric = metricOptions.find((metric) => metric.key === selectedMetricKey) || metricOptions[0];
   const pickerOptions = options.map((option) => ({
     value: option.exerciseId,
     label: option.exerciseName
   }));
   const chartPoints = progress.slice(-8);
-  const values = chartPoints.map((point) => point.totalVolume);
-  const min = Math.min(...values);
-  const max = Math.max(...values);
+  const values = chartPoints
+    .map((point) => toOptionalNumber(point[activeMetric.key]))
+    .filter((value) => value !== null);
+  const min = values.length ? Math.min(...values) : 0;
+  const max = values.length ? Math.max(...values) : 0;
   const range = max - min || 1;
   const pathPoints = chartPoints.map((point, index) => {
+    const value = toOptionalNumber(point[activeMetric.key]) ?? min;
     const x = chartPoints.length === 1 ? 50 : (index / (chartPoints.length - 1)) * 100;
-    const y = 90 - ((point.totalVolume - min) / range) * 70;
+    const y = 90 - ((value - min) / range) * 70;
     return `${x},${y}`;
   }).join(' ');
+  const latestPoint = progress[progress.length - 1] || null;
+  const latestMetricValue = latestPoint ? toOptionalNumber(latestPoint[activeMetric.key]) : null;
+
+  function getBestValue(key) {
+    const metricValues = progress
+      .map((point) => toOptionalNumber(point[key]))
+      .filter((value) => value !== null);
+
+    return metricValues.length ? Math.max(...metricValues) : null;
+  }
+
+  function formatProgressValue(value, metric = activeMetric) {
+    if (value === null || value === undefined) return '-';
+    return `${formatNumber(value, metric.decimals)}${metric.suffix}`;
+  }
 
   return (
-    <article className="card full">
+    <article className="card full exercise-progress-card">
       <div className="section-heading">
         <div>
           <h3>Exercise Progress</h3>
-          <p className="muted">Track best kg and volume over time for one exercise.</p>
+          <p className="muted">Choose one exercise and track strength, best sets, and total work.</p>
         </div>
         <label className="compact-select">
           <span>Exercise</span>
@@ -1037,43 +1092,88 @@ function ExerciseProgressCard({ options, selectedExerciseId, onSelectExercise, p
 
       {!options.length ? (
         <p className="muted">Log workouts to see exercise progress.</p>
-      ) : progress.length < 2 ? (
-        <p className="muted">Log this exercise more than once to see progress over time.</p>
+      ) : !progress.length ? (
+        <p className="muted">Choose an exercise with logged sets to see progress.</p>
       ) : (
-        <div className="exercise-progress">
-          <div className="trend-card">
-            <svg viewBox="0 0 100 100" role="img" aria-label="Exercise progress chart" preserveAspectRatio="none">
-              <polyline points={pathPoints} />
-              {chartPoints.map((point, index) => {
-                const x = chartPoints.length === 1 ? 50 : (index / (chartPoints.length - 1)) * 100;
-                const y = 90 - ((point.totalVolume - min) / range) * 70;
-                return <circle key={`${point.date}-${index}`} cx={x} cy={y} r="2.5" />;
-              })}
-            </svg>
-            <div className="trend-labels">
-              <span>{chartPoints[0].date}</span>
-              <strong>{formatNumber(chartPoints[chartPoints.length - 1].totalVolume, 0)} volume</strong>
-              <span>{chartPoints[chartPoints.length - 1].date}</span>
+        <>
+          {progress.length < 2 && (
+            <p className="muted">Log this exercise again to unlock the progress chart. Current stats are shown below.</p>
+          )}
+
+          <div className="metric-toggle" role="group" aria-label="Progress metric">
+            {metricOptions.map((metric) => (
+              <button
+                key={metric.key}
+                type="button"
+                className={`metric-chip ${activeMetric.key === metric.key ? 'active' : ''}`.trim()}
+                onClick={() => setSelectedMetricKey(metric.key)}
+              >
+                {metric.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="exercise-summary-grid">
+            <div className="exercise-summary-stat">
+              <span>Latest {activeMetric.shortLabel}</span>
+              <strong>{formatProgressValue(latestMetricValue)}</strong>
+              <small>{latestPoint?.date || '-'}</small>
+            </div>
+            <div className="exercise-summary-stat">
+              <span>Best kg</span>
+              <strong>{formatProgressValue(getBestValue('bestKg'), metricOptions[1])}</strong>
+              <small>Top load</small>
+            </div>
+            <div className="exercise-summary-stat">
+              <span>Best set volume</span>
+              <strong>{formatProgressValue(getBestValue('bestSetVolume'), metricOptions[2])}</strong>
+              <small>Kg x reps</small>
+            </div>
+            <div className="exercise-summary-stat">
+              <span>Best total volume</span>
+              <strong>{formatProgressValue(getBestValue('totalVolume'), metricOptions[0])}</strong>
+              <small>Workout total</small>
             </div>
           </div>
 
-          <div className="exercise-progress-table">
-            <div className="exercise-progress-row exercise-progress-head">
-              <span>Date</span>
-              <span>Best kg</span>
-              <span>Best set volume</span>
-              <span>Total volume</span>
-            </div>
-            {progress.map((point) => (
-              <div className="exercise-progress-row" key={point.date}>
-                <strong>{point.date}</strong>
-                <span>{formatNumber(point.bestKg)} kg</span>
-                <span>{formatNumber(point.bestSetVolume, 0)}</span>
-                <span>{formatNumber(point.totalVolume, 0)}</span>
+          {progress.length >= 2 && (
+            <div className="exercise-progress">
+              <div className="trend-card">
+              <svg viewBox="0 0 100 100" role="img" aria-label="Exercise progress chart" preserveAspectRatio="none">
+                <polyline points={pathPoints} />
+                {chartPoints.map((point, index) => {
+                  const value = toOptionalNumber(point[activeMetric.key]) ?? min;
+                  const x = chartPoints.length === 1 ? 50 : (index / (chartPoints.length - 1)) * 100;
+                  const y = 90 - ((value - min) / range) * 70;
+                  return <circle key={`${point.date}-${index}`} cx={x} cy={y} r="2.5" />;
+                })}
+              </svg>
+              <div className="trend-labels">
+                <span>{chartPoints[0].date}</span>
+                <strong>{activeMetric.label}: {formatProgressValue(latestMetricValue)}</strong>
+                <span>{chartPoints[chartPoints.length - 1].date}</span>
               </div>
-            ))}
-          </div>
-        </div>
+            </div>
+
+            <div className="exercise-progress-table">
+              <div className="exercise-progress-row exercise-progress-head">
+                <span>Date</span>
+                <span>Best kg</span>
+                <span>Best set volume</span>
+                <span>Total volume</span>
+              </div>
+              {progress.map((point) => (
+                <div className="exercise-progress-row" key={point.date}>
+                  <strong>{point.date}</strong>
+                  <span>{formatNumber(point.bestKg)} kg</span>
+                  <span>{formatNumber(point.bestSetVolume, 0)}</span>
+                  <span>{formatNumber(point.totalVolume, 0)}</span>
+                </div>
+              ))}
+            </div>
+            </div>
+          )}
+        </>
       )}
     </article>
   );
