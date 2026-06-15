@@ -1832,7 +1832,7 @@ function useIsMobilePicker() {
   const [isMobilePicker, setIsMobilePicker] = useState(false);
 
   useEffect(() => {
-    const media = window.matchMedia('(max-width: 820px)');
+    const media = window.matchMedia('(max-width: 768px), (hover: none) and (pointer: coarse)');
 
     function handleChange() {
       setIsMobilePicker(media.matches);
@@ -1950,17 +1950,37 @@ function AppSelect({ pickerId, value, onChange, options = [], groups = [], place
     openPicker();
   }
 
-  const pickerLayer = (
+  function renderOptions(optionClassName = 'app-picker-option') {
+    return visibleGroups.length ? visibleGroups.map((group) => (
+      <div className="app-picker-group" key={group.label || 'options'}>
+        {group.label && <div className="app-picker-group-label">{group.label}</div>}
+        {group.options.map((option) => {
+          const isSelected = String(option.value) === String(value ?? '');
+          return (
+            <button
+              type="button"
+              role="option"
+              aria-selected={isSelected}
+              className={isSelected ? `${optionClassName} selected` : optionClassName}
+              key={`${group.label}-${option.value}`}
+              disabled={option.disabled}
+              onClick={() => handleOptionSelect(option)}
+              ref={isSelected ? selectedOptionRef : null}
+            >
+              {option.label}
+            </button>
+          );
+        })}
+      </div>
+    )) : (
+      <p className="app-picker-empty">No matching options.</p>
+    );
+  }
+
+  const desktopPickerLayer = (
     <>
       <button className="app-picker-backdrop" type="button" aria-label="Close picker" onClick={() => setActivePicker(null)} />
-      <div className={isMobilePicker ? 'app-picker-popover app-picker-modal' : 'app-picker-popover'} ref={popoverRef}>
-        <div className="app-picker-modal-header">
-          <div>
-            <span>Choose</span>
-            <strong>{ariaLabel || placeholder}</strong>
-          </div>
-          <button className="ghost small" type="button" onClick={() => setActivePicker(null)}>Close</button>
-        </div>
+      <div className="app-picker-popover" ref={popoverRef}>
         {shouldShowSearch && (
           <div className="app-picker-search">
             <input
@@ -1973,30 +1993,36 @@ function AppSelect({ pickerId, value, onChange, options = [], groups = [], place
           </div>
         )}
         <div className="app-picker-options" role="listbox" id={selectId} aria-label={ariaLabel || placeholder}>
-          {visibleGroups.length ? visibleGroups.map((group) => (
-            <div className="app-picker-group" key={group.label || 'options'}>
-              {group.label && <div className="app-picker-group-label">{group.label}</div>}
-              {group.options.map((option) => {
-                const isSelected = String(option.value) === String(value ?? '');
-                return (
-                  <button
-                    type="button"
-                    role="option"
-                    aria-selected={isSelected}
-                    className={isSelected ? 'app-picker-option selected' : 'app-picker-option'}
-                    key={`${group.label}-${option.value}`}
-                    disabled={option.disabled}
-                    onClick={() => handleOptionSelect(option)}
-                    ref={isSelected ? selectedOptionRef : null}
-                  >
-                    {option.label}
-                  </button>
-                );
-              })}
-            </div>
-          )) : (
-            <p className="app-picker-empty">No matching options.</p>
-          )}
+          {renderOptions()}
+        </div>
+      </div>
+    </>
+  );
+
+  const mobilePickerLayer = (
+    <>
+      <button className="app-select-mobile-overlay" type="button" aria-label="Close picker" onClick={() => setActivePicker(null)} />
+      <div className="app-select-mobile-modal" ref={popoverRef} role="dialog" aria-modal="true" aria-label={ariaLabel || placeholder}>
+        <div className="app-select-mobile-header">
+          <div>
+            <span>Choose</span>
+            <strong>{ariaLabel || placeholder}</strong>
+          </div>
+          <button className="ghost small" type="button" onClick={() => setActivePicker(null)}>Close</button>
+        </div>
+        {shouldShowSearch && (
+          <div className="app-select-mobile-search">
+            <input
+              ref={searchInputRef}
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
+              placeholder={`Search ${placeholder.toLowerCase()}`}
+              aria-label={`Search ${ariaLabel || placeholder}`}
+            />
+          </div>
+        )}
+        <div className="app-select-mobile-options" role="listbox" id={selectId} aria-label={ariaLabel || placeholder}>
+          {renderOptions('app-select-mobile-option')}
         </div>
       </div>
     </>
@@ -2023,7 +2049,7 @@ function AppSelect({ pickerId, value, onChange, options = [], groups = [], place
         <span className="app-picker-chevron" aria-hidden="true">v</span>
       </button>
 
-      {isOpen && (isMobilePicker && typeof document !== 'undefined' ? createPortal(pickerLayer, document.body) : pickerLayer)}
+      {isOpen && (isMobilePicker && typeof document !== 'undefined' ? createPortal(mobilePickerLayer, document.body) : desktopPickerLayer)}
     </div>
   );
 }
