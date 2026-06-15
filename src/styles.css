@@ -1588,18 +1588,20 @@ small {
     background: rgba(0, 0, 0, 0.48);
     backdrop-filter: blur(4px);
     -webkit-backdrop-filter: blur(4px);
+    touch-action: none;
   }
 
   .app-picker-popover {
     position: fixed;
-    top: auto;
+    top: 12px;
+    top: max(12px, env(safe-area-inset-top));
     left: 12px;
     right: 12px;
     bottom: 12px;
     bottom: max(12px, env(safe-area-inset-bottom));
     z-index: 59;
-    max-height: calc(100vh - 32px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
-    max-height: calc(100dvh - 32px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    height: auto;
+    max-height: none;
     padding: 12px 12px calc(12px + env(safe-area-inset-bottom));
     border-radius: var(--radius-soft);
     transform-origin: bottom center;
@@ -1628,7 +1630,13 @@ small {
   }
 
   .app-picker-options {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
     padding-bottom: env(safe-area-inset-bottom);
+    touch-action: pan-y;
   }
 
   .weekly-goal-grid {
