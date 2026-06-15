@@ -1404,6 +1404,54 @@ function WorkoutLog({ workouts, onAdd, onDelete, onToast }) {
     }));
   }
 
+  function getCopyableSetValues(set) {
+    if (!set) return null;
+    const kg = set.kg === null || set.kg === undefined ? '' : parseSelectNumber(set.kg);
+    const reps = set.reps === null || set.reps === undefined ? '' : parseSelectNumber(set.reps);
+    if (kg === '' && reps === '') return null;
+    return { kg, reps };
+  }
+
+  function getLastSavedSetValues(exerciseId) {
+    const last = getLastExerciseEntry(workouts, exerciseId);
+    const previousSets = last?.entry?.sets || [];
+
+    for (let index = previousSets.length - 1; index >= 0; index -= 1) {
+      const values = getCopyableSetValues(previousSets[index]);
+      if (values) return values;
+    }
+
+    return null;
+  }
+
+  function useLastValues(entryId, setIndex) {
+    let didCopy = false;
+
+    setEntries(entries.map((entry) => {
+      if (entry.id !== entryId) return entry;
+      const sourceValues = setIndex > 0
+        ? getCopyableSetValues(entry.sets[setIndex - 1])
+        : getLastSavedSetValues(entry.exerciseId);
+
+      if (!sourceValues) return entry;
+
+      didCopy = true;
+      return {
+        ...entry,
+        sets: entry.sets.map((set, index) => index === setIndex ? { ...set, ...sourceValues } : set)
+      };
+    }));
+
+    if (didCopy) {
+      triggerHaptic('light');
+      onToast?.('Values copied ✓');
+      return;
+    }
+
+    triggerHaptic('error');
+    onToast?.('No previous values found', 'info');
+  }
+
   function addSameSet(entryId) {
     setEntries(entries.map((entry) => {
       if (entry.id !== entryId) return entry;
@@ -1527,6 +1575,7 @@ function WorkoutLog({ workouts, onAdd, onDelete, onToast }) {
                       <span>Set</span>
                       <span>Kg</span>
                       <span>Reps</span>
+                      <span>Fill</span>
                       <span></span>
                     </div>
                     {entry.sets.map((set, index) => (
@@ -1548,6 +1597,7 @@ function WorkoutLog({ workouts, onAdd, onDelete, onToast }) {
                           placeholder={entry.exerciseId === 'treadmill' ? 'min' : 'reps'}
                           ariaLabel={entry.exerciseId === 'treadmill' ? 'Minutes' : 'Reps'}
                         />
+                        <button type="button" className="secondary use-last-button" onClick={() => useLastValues(entry.id, index)}>Use last</button>
                         <button type="button" className="ghost danger mini" onClick={() => removeSet(entry.id, index)} aria-label="Remove set">×</button>
                       </div>
                     ))}

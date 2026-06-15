@@ -861,9 +861,10 @@ small {
   left: 0;
   right: 0;
   z-index: 60;
-  display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
+  display: flex;
+  flex-direction: column;
   max-height: min(360px, 56vh);
+  max-height: min(360px, 56dvh);
   overflow: hidden;
   padding: 8px;
   border: 1px solid var(--accent-line);
@@ -919,7 +920,9 @@ small {
 
 .app-picker-options {
   min-height: 0;
+  flex: 1 1 auto;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
   scroll-behavior: smooth;
   padding-right: 2px;
@@ -1242,7 +1245,7 @@ small {
 
 .sets-row {
   display: grid;
-  grid-template-columns: 46px 1fr 1fr 38px;
+  grid-template-columns: 46px minmax(0, 1fr) minmax(0, 1fr) auto 38px;
   gap: 8px;
   align-items: center;
 }
@@ -1252,6 +1255,13 @@ small {
   font-size: 0.85rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
+}
+
+.use-last-button {
+  min-height: 38px;
+  padding: 0 10px;
+  white-space: nowrap;
+  font-size: 0.82rem;
 }
 
 .history-exercise {
@@ -1528,7 +1538,14 @@ small {
   }
 
   .sets-row {
-    grid-template-columns: 30px minmax(0, 1fr) minmax(0, 1fr) 34px;
+    grid-template-columns: 30px minmax(0, 1fr) minmax(0, 1fr) 76px 34px;
+    gap: 6px;
+  }
+
+  .use-last-button {
+    min-height: 34px;
+    padding: 0 8px;
+    font-size: 0.76rem;
   }
 
   .mini {
@@ -1579,9 +1596,11 @@ small {
     left: 12px;
     right: 12px;
     bottom: 12px;
+    bottom: max(12px, env(safe-area-inset-bottom));
     z-index: 59;
-    max-height: min(70vh, 480px);
-    padding: 12px;
+    max-height: calc(100vh - 32px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    max-height: calc(100dvh - 32px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    padding: 12px 12px calc(12px + env(safe-area-inset-bottom));
     border-radius: var(--radius-soft);
     transform-origin: bottom center;
     animation: picker-sheet-in 0.18s ease-out both;
@@ -1606,6 +1625,10 @@ small {
   .app-picker-option {
     min-height: 48px;
     padding: 12px;
+  }
+
+  .app-picker-options {
+    padding-bottom: env(safe-area-inset-bottom);
   }
 
   .weekly-goal-grid {
