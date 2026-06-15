@@ -883,6 +883,10 @@ small {
   animation: picker-popover-in 0.16s ease-out both;
 }
 
+.app-picker-modal-header {
+  display: none;
+}
+
 @keyframes picker-popover-in {
   from {
     opacity: 0;
@@ -1582,7 +1586,7 @@ small {
     display: block;
     position: fixed;
     inset: 0;
-    z-index: 58;
+    z-index: 98;
     border: 0;
     padding: 0;
     background: rgba(0, 0, 0, 0.48);
@@ -1593,35 +1597,64 @@ small {
 
   .app-picker-popover {
     position: fixed;
-    top: 12px;
-    top: max(12px, env(safe-area-inset-top));
-    left: 12px;
-    right: 12px;
-    bottom: 12px;
-    bottom: max(12px, env(safe-area-inset-bottom));
-    z-index: 59;
-    height: auto;
+    inset: 0;
+    z-index: 99;
+    width: 100%;
+    height: 100vh;
+    height: 100svh;
+    height: 100dvh;
     max-height: none;
-    padding: 12px 12px calc(12px + env(safe-area-inset-bottom));
-    border-radius: var(--radius-soft);
-    transform-origin: bottom center;
-    animation: picker-sheet-in 0.18s ease-out both;
+    padding:
+      calc(14px + env(safe-area-inset-top))
+      12px
+      calc(16px + env(safe-area-inset-bottom));
+    border: 0;
+    border-radius: 0;
+    transform-origin: center;
+    animation: picker-modal-in 0.16s ease-out both;
   }
 
-  @keyframes picker-sheet-in {
+  @keyframes picker-modal-in {
     from {
       opacity: 0;
-      transform: translateY(16px);
+      transform: scale(0.99);
     }
 
     to {
       opacity: 1;
-      transform: translateY(0);
+      transform: scale(1);
     }
   }
 
+  .app-picker-modal-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: center;
+    padding: 0 2px 12px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .app-picker-modal-header span {
+    display: block;
+    margin-bottom: 4px;
+    color: var(--muted);
+    font-size: 0.78rem;
+    font-weight: 850;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .app-picker-modal-header strong {
+    display: block;
+    color: var(--text);
+    font-size: 1.08rem;
+    letter-spacing: -0.02em;
+  }
+
   .app-picker-search {
-    padding: 2px 2px 10px;
+    flex: 0 0 auto;
+    padding: 12px 2px 10px;
   }
 
   .app-picker-option {
@@ -1635,7 +1668,7 @@ small {
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
     overscroll-behavior: contain;
-    padding-bottom: env(safe-area-inset-bottom);
+    padding: 10px 0 calc(16px + env(safe-area-inset-bottom));
     touch-action: pan-y;
   }
 

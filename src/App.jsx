@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { exercises } from './data/exercises.js';
 import { calculateBMI, formatNumber, getBMICategory, getTodayISO, sortByDateDesc } from './utils/calculations.js';
 
@@ -1827,12 +1828,43 @@ function useActivePickerId() {
   return [currentPickerId, setActivePickerId];
 }
 
+function useIsMobilePicker() {
+  const [isMobilePicker, setIsMobilePicker] = useState(false);
+
+  useEffect(() => {
+    const media = window.matchMedia('(max-width: 820px)');
+
+    function handleChange() {
+      setIsMobilePicker(media.matches);
+    }
+
+    handleChange();
+    if (typeof media.addEventListener === 'function') {
+      media.addEventListener('change', handleChange);
+    } else {
+      media.addListener(handleChange);
+    }
+
+    return () => {
+      if (typeof media.removeEventListener === 'function') {
+        media.removeEventListener('change', handleChange);
+      } else {
+        media.removeListener(handleChange);
+      }
+    };
+  }, []);
+
+  return isMobilePicker;
+}
+
 function AppSelect({ pickerId, value, onChange, options = [], groups = [], placeholder = 'Select', ariaLabel, className = '' }) {
   const [searchTerm, setSearchTerm] = useState('');
   const pickerRef = useRef(null);
+  const popoverRef = useRef(null);
   const generatedPickerId = useRef(`picker-${crypto.randomUUID()}`).current;
   const pickerInstanceId = pickerId || generatedPickerId;
   const [activePicker, setActivePicker] = useActivePickerId();
+  const isMobilePicker = useIsMobilePicker();
   const searchInputRef = useRef(null);
   const selectedOptionRef = useRef(null);
   const selectId = `options-${pickerInstanceId}`;
@@ -1858,7 +1890,9 @@ function AppSelect({ pickerId, value, onChange, options = [], groups = [], place
     document.body.classList.add('picker-open');
 
     function handlePointerDown(event) {
-      if (!pickerRef.current?.contains(event.target)) {
+      const isInsideTrigger = pickerRef.current?.contains(event.target);
+      const isInsidePopover = popoverRef.current?.contains(event.target);
+      if (!isInsideTrigger && !isInsidePopover) {
         setActivePicker(null);
       }
     }
@@ -1916,6 +1950,58 @@ function AppSelect({ pickerId, value, onChange, options = [], groups = [], place
     openPicker();
   }
 
+  const pickerLayer = (
+    <>
+      <button className="app-picker-backdrop" type="button" aria-label="Close picker" onClick={() => setActivePicker(null)} />
+      <div className={isMobilePicker ? 'app-picker-popover app-picker-modal' : 'app-picker-popover'} ref={popoverRef}>
+        <div className="app-picker-modal-header">
+          <div>
+            <span>Choose</span>
+            <strong>{ariaLabel || placeholder}</strong>
+          </div>
+          <button className="ghost small" type="button" onClick={() => setActivePicker(null)}>Close</button>
+        </div>
+        {shouldShowSearch && (
+          <div className="app-picker-search">
+            <input
+              ref={searchInputRef}
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
+              placeholder={`Search ${placeholder.toLowerCase()}`}
+              aria-label={`Search ${ariaLabel || placeholder}`}
+            />
+          </div>
+        )}
+        <div className="app-picker-options" role="listbox" id={selectId} aria-label={ariaLabel || placeholder}>
+          {visibleGroups.length ? visibleGroups.map((group) => (
+            <div className="app-picker-group" key={group.label || 'options'}>
+              {group.label && <div className="app-picker-group-label">{group.label}</div>}
+              {group.options.map((option) => {
+                const isSelected = String(option.value) === String(value ?? '');
+                return (
+                  <button
+                    type="button"
+                    role="option"
+                    aria-selected={isSelected}
+                    className={isSelected ? 'app-picker-option selected' : 'app-picker-option'}
+                    key={`${group.label}-${option.value}`}
+                    disabled={option.disabled}
+                    onClick={() => handleOptionSelect(option)}
+                    ref={isSelected ? selectedOptionRef : null}
+                  >
+                    {option.label}
+                  </button>
+                );
+              })}
+            </div>
+          )) : (
+            <p className="app-picker-empty">No matching options.</p>
+          )}
+        </div>
+      </div>
+    </>
+  );
+
   return (
     <div className={`app-picker ${className}`.trim()} ref={pickerRef}>
       <button
@@ -1937,50 +2023,7 @@ function AppSelect({ pickerId, value, onChange, options = [], groups = [], place
         <span className="app-picker-chevron" aria-hidden="true">v</span>
       </button>
 
-      {isOpen && (
-        <>
-          <button className="app-picker-backdrop" type="button" aria-label="Close picker" onClick={() => setActivePicker(null)} />
-          <div className="app-picker-popover">
-            {shouldShowSearch && (
-              <div className="app-picker-search">
-                <input
-                  ref={searchInputRef}
-                  value={searchTerm}
-                  onChange={(event) => setSearchTerm(event.target.value)}
-                  placeholder={`Search ${placeholder.toLowerCase()}`}
-                  aria-label={`Search ${ariaLabel || placeholder}`}
-                />
-              </div>
-            )}
-            <div className="app-picker-options" role="listbox" id={selectId} aria-label={ariaLabel || placeholder}>
-              {visibleGroups.length ? visibleGroups.map((group) => (
-                <div className="app-picker-group" key={group.label || 'options'}>
-                  {group.label && <div className="app-picker-group-label">{group.label}</div>}
-                  {group.options.map((option) => {
-                    const isSelected = String(option.value) === String(value ?? '');
-                    return (
-                      <button
-                        type="button"
-                        role="option"
-                        aria-selected={isSelected}
-                        className={isSelected ? 'app-picker-option selected' : 'app-picker-option'}
-                        key={`${group.label}-${option.value}`}
-                        disabled={option.disabled}
-                        onClick={() => handleOptionSelect(option)}
-                        ref={isSelected ? selectedOptionRef : null}
-                      >
-                        {option.label}
-                      </button>
-                    );
-                  })}
-                </div>
-              )) : (
-                <p className="app-picker-empty">No matching options.</p>
-              )}
-            </div>
-          </div>
-        </>
-      )}
+      {isOpen && (isMobilePicker && typeof document !== 'undefined' ? createPortal(pickerLayer, document.body) : pickerLayer)}
     </div>
   );
 }
