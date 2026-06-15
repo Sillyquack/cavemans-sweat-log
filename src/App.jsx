@@ -1832,7 +1832,7 @@ function useIsMobilePicker() {
   const [isMobilePicker, setIsMobilePicker] = useState(false);
 
   useEffect(() => {
-    const media = window.matchMedia('(max-width: 768px), (hover: none) and (pointer: coarse)');
+    const media = window.matchMedia('(max-width: 820px), (hover: none) and (pointer: coarse)');
 
     function handleChange() {
       setIsMobilePicker(media.matches);
