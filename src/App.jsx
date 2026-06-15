@@ -584,6 +584,25 @@ function App() {
     showToast('Workout saved OK');
   }
 
+  function updateWorkout(id, updatedWorkout) {
+    if (!currentStorageKeys) return;
+
+    const nextWorkouts = sortByDateDesc(workouts.map((workout) => {
+      if (workout.id !== id) return workout;
+
+      return {
+        ...updatedWorkout,
+        id: workout.id,
+        createdAt: workout.createdAt || updatedWorkout.createdAt || new Date().toISOString()
+      };
+    }));
+
+    setWorkouts(nextWorkouts);
+    saveToStorage(currentStorageKeys.workouts, nextWorkouts);
+    triggerHaptic('success');
+    showToast('Workout updated OK');
+  }
+
   function deleteWorkout(id) {
     if (!currentStorageKeys) return;
     const nextWorkouts = workouts.filter((workout) => workout.id !== id);
@@ -738,7 +757,8 @@ function App() {
       <main>
         {activeTab === 'dashboard' && <Dashboard profile={profile} bodyLogs={bodyLogs} workouts={workouts} />}
         {activeTab === 'body' && <BodyLog profile={profile} bodyLogs={bodyLogs} onAdd={addBodyLog} onDelete={deleteBodyLog} />}
-        {activeTab === 'workout' && <WorkoutLog workouts={workouts} onAdd={addWorkout} onDelete={deleteWorkout} onToast={showToast} />}
+        {activeTab === 'workout' && <WorkoutLog workouts={workouts} onAdd={addWorkout} onUpdate={updateWorkout}
+          onDelete={deleteWorkout} onToast={showToast} />}
         {activeTab === 'exercises' && <ExerciseLibrary workouts={workouts} />}
         {activeTab === 'settings' && <Settings profile={profile} onSave={updateProfile} onExport={exportData} onImport={importData} onToast={showToast} />}
       </main>
@@ -1341,13 +1361,15 @@ function BodyLog({ profile, bodyLogs, onAdd, onDelete }) {
   );
 }
 
-function WorkoutLog({ workouts, onAdd, onDelete, onToast }) {
+function WorkoutLog({ workouts, onAdd, onUpdate, onDelete, onToast }) {
   const [title, setTitle] = useState('Upper Body');
   const [date, setDate] = useState(getTodayISO());
   const [note, setNote] = useState('');
   const [entries, setEntries] = useState([]);
   const [selectedExerciseId, setSelectedExerciseId] = useState(exercises[0].id);
   const [selectedTemplateId, setSelectedTemplateId] = useState('');
+  const [editingWorkoutId, setEditingWorkoutId] = useState(null);
+  const isEditingWorkout = Boolean(editingWorkoutId);
 
   const selectedExercise = getExerciseById(selectedExerciseId);
   const lastSelected = getLastExerciseEntry(workouts, selectedExerciseId);
@@ -1379,6 +1401,35 @@ function WorkoutLog({ workouts, onAdd, onDelete, onToast }) {
     { value: '', label: 'min' },
     ...repOptions.map((minutes) => ({ value: minutes, label: String(minutes) }))
   ], []);
+
+  function getExerciseByName(exerciseName) {
+    const targetName = String(exerciseName ?? '').trim().toLowerCase();
+    if (!targetName) return null;
+    return exercises.find((exercise) => String(exercise.name ?? '').trim().toLowerCase() === targetName);
+  }
+
+  function normalizeSavedWorkoutEntries(savedEntries = []) {
+    return savedEntries.map((entry) => {
+      const matchedExercise = getExerciseById(entry.exerciseId) || getExerciseByName(entry.exerciseName || entry.name);
+      const exerciseId = matchedExercise?.id || entry.exerciseId || '';
+      const exerciseName = matchedExercise?.name || entry.exerciseName || entry.name || 'Exercise';
+      const savedSets = Array.isArray(entry.sets) && entry.sets.length > 0
+        ? entry.sets
+        : [{ kg: '', reps: matchedExercise?.defaultReps || 12 }];
+
+      return {
+        ...entry,
+        id: entry.id || crypto.randomUUID(),
+        exerciseId,
+        exerciseName,
+        sets: savedSets.map((set) => ({
+          kg: set.kg ?? '',
+          reps: set.reps ?? matchedExercise?.defaultReps ?? 12
+        })),
+        note: entry.note || ''
+      };
+    });
+  }
 
   function createExerciseEntry(exercise, usePreviousSets = true) {
     const previous = usePreviousSets ? getLastExerciseEntry(workouts, exercise.id) : null;
@@ -1514,31 +1565,90 @@ function WorkoutLog({ workouts, onAdd, onDelete, onToast }) {
     setEntries(entries.map((entry) => entry.id === entryId ? { ...entry, note: value } : entry));
   }
 
+  function startEditWorkout(workout) {
+    setEditingWorkoutId(workout.id);
+    setTitle(workout.title || 'Upper Body');
+    setDate(workout.date || getTodayISO());
+    setNote(workout.note || '');
+    setEntries(normalizeSavedWorkoutEntries(workout.entries || []));
+    setSelectedTemplateId('');
+    triggerHaptic('medium');
+    onToast?.('Editing saved workout');
+
+    window.setTimeout(() => {
+      document.getElementById('workout-editor-card')?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start'
+      });
+    }, 0);
+  }
+
+  function cancelEditWorkout() {
+    setEditingWorkoutId(null);
+    setTitle('Upper Body');
+    setDate(getTodayISO());
+    setNote('');
+    setEntries([]);
+    setSelectedTemplateId('');
+    triggerHaptic('light');
+    onToast?.('Edit cancelled');
+  }
+
   function handleSubmit(event) {
     event.preventDefault();
     if (entries.length === 0) return;
-    onAdd({ title, date, note, entries });
+
+    const workoutData = { title, date, note, entries };
+
+    if (isEditingWorkout) {
+      onUpdate?.(editingWorkoutId, workoutData);
+      setEditingWorkoutId(null);
+      setTitle('Upper Body');
+      setDate(getTodayISO());
+      setNote('');
+      setEntries([]);
+      setSelectedTemplateId('');
+      return;
+    }
+
+    onAdd(workoutData);
     setEntries([]);
     setNote('');
   }
 
   return (
     <section className="grid two">
-      <article className="card wide-card">
-        <h2>Workout Log</h2>
-        <p className="muted">Choose an exercise, add sets, then save sweat.</p>
+      <article id="workout-editor-card" className={`card wide-card ${isEditingWorkout ? 'editing-workout-card' : ''}`.trim()}>
+        <h2>{isEditingWorkout ? 'Edit Workout' : 'Workout Log'}</h2>
+        <p className="muted">
+          {isEditingWorkout
+            ? 'You are editing a saved workout. Change the fields below and press Update Sweat.'
+            : 'Choose an exercise, add sets, then save sweat.'}
+        </p>
 
-        <form onSubmit={handleSubmit} className="workout-form">
+        {isEditingWorkout && (
+          <div className="edit-mode-banner">
+            <div>
+              <strong>Editing: {title}</strong>
+              <p>Make changes in this form, then press Update Sweat. Nothing is changed until you save.</p>
+            </div>
+            <button type="button" className="ghost small" onClick={cancelEditWorkout}>Cancel edit</button>
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className={`workout-form ${isEditingWorkout ? 'workout-form-editing' : ''}`.trim()}>
           <div className="form-grid">
             <Input label="Workout title" value={title} onChange={setTitle} />
             <Input label="Date" type="date" value={date} onChange={setDate} />
           </div>
 
           <div className="template-box">
+            {!isEditingWorkout && (
             <div>
               <h3>Workout Templates</h3>
               <p className="muted">Choose a template to quickly start a workout. You can adjust kg and reps before saving.</p>
             </div>
+            )}
             <div className="template-actions">
               <label className="field">
                 <span>Template</span>
@@ -1646,7 +1756,7 @@ function WorkoutLog({ workouts, onAdd, onDelete, onToast }) {
             <textarea value={note} onChange={(event) => setNote(event.target.value)} placeholder="Energy, sleep, pump, cardio after, etc." />
           </label>
 
-          <button className="primary" type="submit">Save Sweat</button>
+          <button className="primary" type="submit">{isEditingWorkout ? 'Update Sweat' : 'Save Sweat'}</button>
         </form>
       </article>
 
@@ -1661,7 +1771,10 @@ function WorkoutLog({ workouts, onAdd, onDelete, onToast }) {
                   <strong>{workout.title}</strong>
                   <p>{workout.date}</p>
                 </div>
-                <button className="ghost danger" onClick={() => onDelete(workout.id)}>Delete</button>
+                <div className="history-actions">
+                  <button className="secondary small" type="button" onClick={() => startEditWorkout(workout)}>Edit</button>
+                  <button className="ghost danger" type="button" onClick={() => onDelete(workout.id)}>Delete</button>
+                </div>
               </div>
               {workout.entries.map((entry) => (
                 <div className="history-exercise" key={entry.id}>

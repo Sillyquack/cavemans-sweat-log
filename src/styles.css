@@ -1896,3 +1896,67 @@ small {
     transform: translate(-50%, -50%) !important;
   }
 }
+
+
+/* Saved workout edit mode */
+.edit-mode-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 14px 0;
+  padding: 14px;
+  border: 1px solid rgba(var(--accent-rgb), 0.32);
+  border-radius: var(--radius);
+  background:
+    linear-gradient(135deg, rgba(var(--accent-rgb), 0.14), transparent),
+    var(--panel-2);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.edit-mode-banner p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.workout-form-editing {
+  border-top: 1px solid rgba(var(--accent-rgb), 0.24);
+  padding-top: 14px;
+}
+
+.history-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+@media (max-width: 640px) {
+  .edit-mode-banner {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .history-actions {
+    justify-content: flex-end;
+  }
+}
+
+
+/* Clearer saved workout edit state */
+.editing-workout-card {
+  border-color: rgba(var(--accent-rgb), 0.48);
+  box-shadow:
+    0 0 0 1px rgba(var(--accent-rgb), 0.22),
+    0 18px 48px rgba(0, 0, 0, 0.28),
+    0 0 42px rgba(var(--accent-rgb), 0.12);
+}
+
+.edit-mode-banner strong {
+  display: block;
+  font-size: 1rem;
+}
+
+.edit-mode-banner {
+  scroll-margin-top: 18px;
+}
