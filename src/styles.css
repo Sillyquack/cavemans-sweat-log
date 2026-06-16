@@ -2028,3 +2028,107 @@ small {
     grid-template-columns: 1fr;
   }
 }
+
+
+/* Manual kg input */
+.set-number-input {
+  width: 100%;
+  min-width: 0;
+  min-height: 52px;
+  border: 1px solid var(--accent-line);
+  border-radius: calc(var(--radius) - 4px);
+  padding: 0 14px;
+  color: var(--text);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.07), transparent),
+    var(--panel-2);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 10px 28px rgba(0, 0, 0, 0.12);
+  font: inherit;
+  font-weight: 800;
+  outline: none;
+  appearance: textfield;
+}
+
+.set-number-input::-webkit-outer-spin-button,
+.set-number-input::-webkit-inner-spin-button {
+  appearance: none;
+  margin: 0;
+}
+
+.set-number-input::placeholder {
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.set-number-input:focus {
+  border-color: rgba(var(--accent-rgb), 0.62);
+  box-shadow:
+    0 0 0 3px rgba(var(--accent-rgb), 0.14),
+    0 0 28px rgba(var(--accent-rgb), 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+
+/* Manual kg input with smooth picker */
+.kg-input-combo {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 54px;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.kg-input-combo .set-number-input {
+  min-height: 52px;
+}
+
+.kg-quick-picker {
+  min-width: 0;
+}
+
+.kg-quick-picker .app-picker-button {
+  min-height: 52px;
+  padding: 0;
+  justify-content: center;
+}
+
+.kg-quick-picker .app-picker-button span:first-child {
+  display: none;
+}
+
+.kg-quick-picker .app-picker-chevron {
+  margin: 0;
+  font-size: 1.15rem;
+}
+
+@media (max-width: 520px) {
+  .kg-input-combo {
+    grid-template-columns: minmax(0, 1fr) 48px;
+    gap: 6px;
+  }
+}
+
+
+/* Kg quick picker cleanup */
+.kg-quick-picker .app-picker-button {
+  min-height: 52px;
+  width: 54px;
+  padding: 0 !important;
+  justify-content: center;
+}
+
+.kg-quick-picker .app-picker-button > span:not(.app-picker-chevron) {
+  display: none !important;
+}
+
+.kg-quick-picker .app-picker-chevron {
+  display: inline-flex !important;
+  margin: 0 !important;
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+.kg-quick-picker .app-picker-popover {
+  min-width: 160px;
+}
