@@ -1659,6 +1659,37 @@ function WorkoutLog({ workouts, onAdd, onUpdate, onDelete, onToast }) {
     onToast?.('Set added OK');
   }
 
+  function copyFirstSetToAll(entryId) {
+    let didCopy = false;
+
+    setEntries(entries.map((entry) => {
+      if (entry.id !== entryId) return entry;
+
+      const firstSet = entry.sets[0];
+      const sourceValues = getCopyableSetValues(firstSet);
+
+      if (!sourceValues || entry.sets.length < 2) {
+        return entry;
+      }
+
+      didCopy = true;
+
+      return {
+        ...entry,
+        sets: entry.sets.map((set, index) => index === 0 ? set : { ...set, ...sourceValues })
+      };
+    }));
+
+    if (didCopy) {
+      triggerHaptic('light');
+      onToast?.('First set copied OK');
+      return;
+    }
+
+    triggerHaptic('error');
+    onToast?.('Fill set 1 first', 'info');
+  }
+
   function removeSet(entryId, setIndex) {
     let didRemove = false;
     setEntries(entries.map((entry) => {
@@ -1826,7 +1857,10 @@ function WorkoutLog({ workouts, onAdd, onUpdate, onDelete, onToast }) {
                   </div>
 
                   <div className="sets-table">
-                    <p className="sets-help">Log total kg. For plate-loaded machines, add both sides. Example: 15 kg per side = 30 kg.</p>
+                    <div className="sets-help-row">
+                      <p className="sets-help">Log total kg. For plate-loaded machines, add both sides. Example: 15 kg per side = 30 kg.</p>
+                      <button type="button" className="secondary small copy-set-button" onClick={() => copyFirstSetToAll(entry.id)}>Copy first set</button>
+                    </div>
                     <div className="sets-row sets-head">
                       <span>Set</span>
                       <span>Kg</span>
@@ -1851,7 +1885,7 @@ function WorkoutLog({ workouts, onAdd, onUpdate, onDelete, onToast }) {
                             value=""
                             onChange={(value) => updateSet(entry.id, index, 'kg', value)}
                             options={kgPickerOptions}
-                            placeholder="kg"
+                            placeholder="Pick"
                             ariaLabel="Kg picker"
                             className="kg-quick-picker"
                           />
@@ -1874,7 +1908,9 @@ function WorkoutLog({ workouts, onAdd, onUpdate, onDelete, onToast }) {
                     <span>Exercise note</span>
                     <input value={entry.note} onChange={(event) => updateEntryNote(entry.id, event.target.value)} placeholder="Heavy, easy, form note..." />
                   </label>
-                  <button type="button" className="secondary small" onClick={() => addSameSet(entry.id)}>+ Same Set</button>
+                  <div className="set-actions">
+                    <button type="button" className="secondary small" onClick={() => addSameSet(entry.id)}>+ Same Set</button>
+                  </div>
                 </div>
               );
             })}

@@ -2132,3 +2132,122 @@ small {
 .kg-quick-picker .app-picker-popover {
   min-width: 160px;
 }
+
+
+/* Kg picker mobile polish */
+.kg-quick-picker .app-picker-button {
+  min-height: 52px;
+  width: 58px;
+  padding: 0 8px !important;
+  justify-content: center;
+}
+
+.kg-quick-picker .app-picker-button > span:not(.app-picker-chevron) {
+  display: inline !important;
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.kg-quick-picker .app-picker-chevron {
+  display: none !important;
+}
+
+.set-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.copy-set-button {
+  white-space: nowrap;
+}
+
+@media (max-width: 520px) {
+  .kg-input-combo {
+    grid-template-columns: minmax(0, 1fr) 56px;
+  }
+
+  .kg-quick-picker .app-picker-button {
+    width: 56px;
+    font-size: 0.76rem;
+  }
+
+  .set-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .set-actions .secondary {
+    width: 100%;
+  }
+}
+
+
+/* Kg picker final mobile polish */
+.kg-input-combo {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 58px;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.kg-quick-picker .app-picker-button {
+  min-height: 52px;
+  width: 58px;
+  padding: 0 6px !important;
+  justify-content: center;
+}
+
+.kg-quick-picker .app-picker-button > span:not(.app-picker-chevron) {
+  display: inline !important;
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0;
+}
+
+.kg-quick-picker .app-picker-chevron {
+  display: none !important;
+}
+
+.sets-help-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: stretch;
+  margin-bottom: 12px;
+}
+
+.sets-help-row .sets-help {
+  margin: 0;
+}
+
+.sets-help-row .copy-set-button {
+  white-space: nowrap;
+  align-self: stretch;
+}
+
+@media (max-width: 640px) {
+  .sets-help-row {
+    grid-template-columns: 1fr;
+  }
+
+  .sets-help-row .copy-set-button {
+    width: 100%;
+  }
+}
+
+@media (max-width: 520px) {
+  .kg-input-combo {
+    grid-template-columns: minmax(0, 1fr) 52px;
+    gap: 6px;
+  }
+
+  .kg-quick-picker .app-picker-button {
+    width: 52px;
+  }
+
+  .kg-quick-picker .app-picker-button > span:not(.app-picker-chevron) {
+    font-size: 0.68rem;
+  }
+}
