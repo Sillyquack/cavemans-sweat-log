@@ -1490,7 +1490,7 @@ function WorkoutLog({ workouts, onAdd, onUpdate, onDelete, onToast }) {
     options: items.map((exercise) => ({ value: exercise.id, label: exercise.name }))
   })), [exerciseGroups]);
   const kgPickerOptions = useMemo(() => [
-    { value: '', label: 'kg' },
+    { value: '', label: 'Pick kg' },
     ...kgOptions.map((kg) => ({ value: kg, label: String(kg) }))
   ], []);
   const repPickerOptions = useMemo(() => [
@@ -1873,9 +1873,14 @@ function WorkoutLog({ workouts, onAdd, onUpdate, onDelete, onToast }) {
                         <span>{index + 1}</span>
                         <div className="kg-input-combo">
                           <input
-                            className="set-number-input"
+                            className="set-number-input kg-manual-input"
                             inputMode="decimal"
                             value={set.kg ?? ''}
+                            onFocus={(event) => {
+                              window.setTimeout(() => {
+                                event.currentTarget.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                              }, 250);
+                            }}
                             onChange={(event) => updateSet(entry.id, index, 'kg', event.target.value.replace(',', '.'))}
                             placeholder="kg"
                             aria-label="Kg"
@@ -1885,7 +1890,7 @@ function WorkoutLog({ workouts, onAdd, onUpdate, onDelete, onToast }) {
                             value=""
                             onChange={(value) => updateSet(entry.id, index, 'kg', value)}
                             options={kgPickerOptions}
-                            placeholder="Pick"
+                            placeholder="Pick kg"
                             ariaLabel="Kg picker"
                             className="kg-quick-picker"
                           />

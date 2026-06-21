@@ -2251,3 +2251,442 @@ small {
     font-size: 0.68rem;
   }
 }
+
+
+/* Final kg input mobile fix */
+.kg-input-combo {
+  position: relative !important;
+  display: block !important;
+  width: 100% !important;
+  min-width: 0 !important;
+}
+
+.kg-input-combo .set-number-input {
+  width: 100% !important;
+  min-height: 52px !important;
+  padding-right: 58px !important;
+}
+
+.kg-quick-picker {
+  position: absolute !important;
+  top: 6px !important;
+  right: 6px !important;
+  bottom: 6px !important;
+  z-index: 2 !important;
+  width: 46px !important;
+  min-width: 46px !important;
+}
+
+.kg-quick-picker .app-picker-button {
+  width: 46px !important;
+  min-height: 0 !important;
+  height: 100% !important;
+  padding: 0 !important;
+  justify-content: center !important;
+  border-radius: calc(var(--radius) - 8px) !important;
+}
+
+.kg-quick-picker .app-picker-button > span:not(.app-picker-chevron) {
+  display: inline !important;
+  font-size: 0.62rem !important;
+  font-weight: 900 !important;
+  line-height: 1 !important;
+  letter-spacing: 0 !important;
+}
+
+.kg-quick-picker .app-picker-chevron {
+  display: none !important;
+}
+
+.kg-quick-picker .app-picker-popover {
+  min-width: 170px !important;
+}
+
+@media (max-width: 520px) {
+  .kg-input-combo .set-number-input {
+    padding-right: 54px !important;
+  }
+
+  .kg-quick-picker {
+    width: 42px !important;
+    min-width: 42px !important;
+  }
+
+  .kg-quick-picker .app-picker-button {
+    width: 42px !important;
+  }
+
+  .kg-quick-picker .app-picker-button > span:not(.app-picker-chevron) {
+    font-size: 0.58rem !important;
+  }
+}
+
+
+/* Final mobile set row layout */
+@media (max-width: 720px) {
+  .sets-row:not(.sets-head) {
+    display: grid !important;
+    grid-template-columns: 34px minmax(0, 1fr) minmax(0, 1fr) !important;
+    grid-template-areas:
+      "set kg reps"
+      ". fill remove" !important;
+    gap: 8px !important;
+    align-items: center !important;
+  }
+
+  .sets-row:not(.sets-head) > :nth-child(1) {
+    grid-area: set !important;
+  }
+
+  .sets-row:not(.sets-head) > :nth-child(2) {
+    grid-area: kg !important;
+    min-width: 0 !important;
+  }
+
+  .sets-row:not(.sets-head) > :nth-child(3) {
+    grid-area: reps !important;
+    min-width: 0 !important;
+  }
+
+  .sets-row:not(.sets-head) > :nth-child(4) {
+    grid-area: fill !important;
+    min-width: 0 !important;
+  }
+
+  .sets-row:not(.sets-head) > :nth-child(5) {
+    grid-area: remove !important;
+    min-width: 0 !important;
+    justify-self: stretch !important;
+  }
+
+  .sets-row:not(.sets-head) > :nth-child(4) button,
+  .sets-row:not(.sets-head) > :nth-child(4),
+  .sets-row:not(.sets-head) .use-last-button {
+    width: 100% !important;
+  }
+
+  .sets-row:not(.sets-head) > :nth-child(5) button,
+  .sets-row:not(.sets-head) > :nth-child(5) {
+    width: 100% !important;
+  }
+
+  .sets-head {
+    display: grid !important;
+    grid-template-columns: 34px minmax(0, 1fr) minmax(0, 1fr) !important;
+    gap: 8px !important;
+  }
+
+  .sets-head > :nth-child(4),
+  .sets-head > :nth-child(5) {
+    display: none !important;
+  }
+
+  .kg-input-combo {
+    position: relative !important;
+    display: block !important;
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .kg-input-combo .set-number-input {
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 52px !important;
+    padding-right: 58px !important;
+  }
+
+  .kg-quick-picker {
+    position: absolute !important;
+    top: 6px !important;
+    right: 6px !important;
+    bottom: 6px !important;
+    z-index: 2 !important;
+    width: 46px !important;
+    min-width: 46px !important;
+  }
+
+  .kg-quick-picker .app-picker-button {
+    width: 46px !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+    justify-content: center !important;
+    border-radius: calc(var(--radius) - 8px) !important;
+  }
+
+  .kg-quick-picker .app-picker-button > span:not(.app-picker-chevron) {
+    display: inline !important;
+    font-size: 0.62rem !important;
+    font-weight: 900 !important;
+    line-height: 1 !important;
+    letter-spacing: 0 !important;
+  }
+
+  .kg-quick-picker .app-picker-chevron {
+    display: none !important;
+  }
+
+  .sets-row .app-picker,
+  .sets-row .app-picker-button,
+  .sets-row .set-number-input {
+    min-width: 0 !important;
+  }
+}
+
+
+/* Force kg quick picker label */
+@media (max-width: 720px) {
+  .kg-input-combo .kg-quick-picker {
+    width: 44px !important;
+    min-width: 44px !important;
+  }
+
+  .kg-input-combo .kg-quick-picker .app-picker-button {
+    width: 44px !important;
+    min-width: 44px !important;
+    overflow: hidden !important;
+    font-size: 0 !important;
+  }
+
+  .kg-input-combo .kg-quick-picker .app-picker-button > span {
+    display: none !important;
+  }
+
+  .kg-input-combo .kg-quick-picker .app-picker-button::after {
+    content: "Pick";
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--accent);
+    font-size: 0.58rem;
+    font-weight: 900;
+    line-height: 1;
+    letter-spacing: 0;
+  }
+
+  .kg-input-combo .kg-quick-picker .app-picker-chevron {
+    display: none !important;
+  }
+
+  .kg-input-combo .set-number-input {
+    padding-right: 54px !important;
+  }
+}
+
+
+/* Clean kg input + picker layout override */
+.kg-input-combo {
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  gap: 6px !important;
+  position: static !important;
+  width: 100% !important;
+}
+
+.kg-input-combo .set-number-input {
+  width: 100% !important;
+  padding-right: 14px !important;
+}
+
+.kg-quick-picker {
+  position: static !important;
+  width: 100% !important;
+  min-width: 0 !important;
+}
+
+.kg-quick-picker .app-picker-button {
+  width: 100% !important;
+  min-height: 42px !important;
+  height: auto !important;
+  padding: 0 10px !important;
+  justify-content: center !important;
+}
+
+.kg-quick-picker .app-picker-button > span:not(.app-picker-chevron) {
+  display: inline !important;
+  font-size: 0.82rem !important;
+  font-weight: 900 !important;
+}
+
+.kg-quick-picker .app-picker-chevron {
+  display: none !important;
+}
+
+@media (max-width: 720px) {
+  .sets-row:not(.sets-head) {
+    align-items: start !important;
+  }
+
+  .sets-row:not(.sets-head) > :nth-child(2),
+  .sets-row:not(.sets-head) > :nth-child(3) {
+    align-self: stretch !important;
+  }
+}
+
+/* Final clean mobile kg picker override */
+@media (max-width: 720px) {
+  .kg-input-combo {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 6px !important;
+    position: static !important;
+    width: 100% !important;
+  }
+
+  .kg-input-combo .set-number-input {
+    width: 100% !important;
+    min-width: 0 !important;
+    padding-right: 14px !important;
+  }
+
+  .kg-input-combo .kg-quick-picker {
+    position: static !important;
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .kg-input-combo .kg-quick-picker .app-picker-button {
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 40px !important;
+    height: auto !important;
+    padding: 0 10px !important;
+    justify-content: center !important;
+    font-size: inherit !important;
+    overflow: visible !important;
+  }
+
+  .kg-input-combo .kg-quick-picker .app-picker-button::after {
+    content: none !important;
+    display: none !important;
+  }
+
+  .kg-input-combo .kg-quick-picker .app-picker-button > span:not(.app-picker-chevron) {
+    display: inline !important;
+    color: var(--accent) !important;
+    font-size: 0.78rem !important;
+    font-weight: 900 !important;
+    line-height: 1 !important;
+    white-space: nowrap !important;
+  }
+
+  .kg-input-combo .kg-quick-picker .app-picker-chevron {
+    display: none !important;
+  }
+}
+
+
+/* True final mobile kg layout */
+@media (max-width: 720px) {
+  .sets-row:not(.sets-head) {
+    display: grid !important;
+    grid-template-columns: 34px minmax(0, 1fr) minmax(0, 1fr) !important;
+    grid-template-areas:
+      "set kg reps"
+      ". fill remove" !important;
+    gap: 10px 8px !important;
+    align-items: start !important;
+  }
+
+  .sets-row:not(.sets-head) > :nth-child(1) {
+    grid-area: set !important;
+    align-self: center !important;
+  }
+
+  .sets-row:not(.sets-head) > :nth-child(2) {
+    grid-area: kg !important;
+    min-width: 0 !important;
+    width: 100% !important;
+  }
+
+  .sets-row:not(.sets-head) > :nth-child(3) {
+    grid-area: reps !important;
+    min-width: 0 !important;
+    width: 100% !important;
+  }
+
+  .sets-row:not(.sets-head) > :nth-child(4) {
+    grid-area: fill !important;
+    min-width: 0 !important;
+    width: 100% !important;
+  }
+
+  .sets-row:not(.sets-head) > :nth-child(5) {
+    grid-area: remove !important;
+    min-width: 0 !important;
+    width: 100% !important;
+  }
+
+  .sets-head {
+    display: grid !important;
+    grid-template-columns: 34px minmax(0, 1fr) minmax(0, 1fr) !important;
+    gap: 8px !important;
+  }
+
+  .sets-head > :nth-child(4),
+  .sets-head > :nth-child(5) {
+    display: none !important;
+  }
+
+  .kg-input-combo {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 6px !important;
+    position: static !important;
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .kg-input-combo .set-number-input,
+  .kg-input-combo .kg-manual-input {
+    display: block !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 54px !important;
+    padding: 0 14px !important;
+    font-size: 1.05rem !important;
+    text-align: left !important;
+  }
+
+  .kg-input-combo .kg-quick-picker {
+    position: static !important;
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .kg-input-combo .kg-quick-picker .app-picker-button {
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 40px !important;
+    height: auto !important;
+    padding: 0 10px !important;
+    justify-content: center !important;
+    overflow: visible !important;
+  }
+
+  .kg-input-combo .kg-quick-picker .app-picker-button::after {
+    content: none !important;
+    display: none !important;
+  }
+
+  .kg-input-combo .kg-quick-picker .app-picker-button > span:not(.app-picker-chevron) {
+    display: inline !important;
+    color: var(--accent) !important;
+    font-size: 0.78rem !important;
+    font-weight: 900 !important;
+    line-height: 1 !important;
+    white-space: nowrap !important;
+  }
+
+  .kg-input-combo .kg-quick-picker .app-picker-chevron {
+    display: none !important;
+  }
+
+  .sets-row .use-last-button {
+    width: 100% !important;
+  }
+
+  .sets-row .ghost.danger.mini {
+    width: 100% !important;
+  }
+}
